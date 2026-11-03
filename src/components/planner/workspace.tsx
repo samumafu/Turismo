@@ -21,12 +21,17 @@ const JourneyMap = dynamic(() => import("./journey-map"), {
   loading: () => <Skeleton className="h-[500px] w-full" />,
 });
 function Workspace() {
-  const { state } = usePlanner();
+  const { state, actions } = usePlanner();
   const [view, setView] = useState("map");
   const [advanced, setAdvanced] = useState(false);
   useEffect(() => {
-    if (state.action !== "clarify") queueMicrotask(() => setView("map"));
-  }, [state.action, state.itinerary, state.results]);
+    if (state.action !== "clarify")
+      queueMicrotask(() =>
+        setView(
+          state.action === "plan" && state.itinerary ? "itinerary" : "map",
+        ),
+      );
+  }, [state.action, state.itinerary]);
   return (
     <div className="workspace">
       <div className="workspace-top">
@@ -72,7 +77,17 @@ function Workspace() {
         </Button>
         {advanced ? (
           <div id="advanced-search-panel">
-            <AdvancedExplorer />
+            <AdvancedExplorer
+              onResults={actions.discover}
+              onUseSelection={(ids, search) => {
+                actions.selectPlaces(ids, search);
+                setAdvanced(false);
+                queueMicrotask(() => setView("itinerary"));
+                document
+                  .getElementById("mi-itinerario")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
           </div>
         ) : null}
       </div>

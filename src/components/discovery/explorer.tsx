@@ -1,6 +1,5 @@
 "use client";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -43,7 +42,13 @@ const PlaceMap = dynamic(() => import("./place-map"), {
   ssr: false,
   loading: () => <Skeleton className="h-[480px] w-full" />,
 });
-export function DiscoveryExplorer() {
+export function DiscoveryExplorer({
+  onResults,
+  onUseSelection,
+}: {
+  onResults: (result: SearchResponse) => void;
+  onUseSelection: (ids: string[], search: SearchSpec) => void;
+}) {
   const [spec, setSpec] = useState<SearchSpec>(searchSpecSchema.parse({}));
   const [text, setText] = useState("");
   const [result, setResult] = useState<SearchResponse | null>(null);
@@ -81,6 +86,7 @@ export function DiscoveryExplorer() {
     const current = new AbortController();
     controller.current = current;
     setBusy(true);
+    setSelected([]);
     setError(null);
     setResult(null);
     try {
@@ -94,8 +100,10 @@ export function DiscoveryExplorer() {
       if (!response.ok)
         throw new Error(body.error ?? "No se pudo consultar OpenStreetMap.");
       const data = searchResponseSchema.parse(body);
+      if (current.signal.aborted) return;
       setResult(data);
       setSpec(data.spec);
+      onResults(data);
       const url = new URL(window.location.href);
       url.search = new URLSearchParams({
         zona: data.spec.zone,
@@ -124,12 +132,6 @@ export function DiscoveryExplorer() {
     number,
     number,
   ];
-  const planUrl =
-    "/planificar?" +
-    new URLSearchParams({
-      lugares: selected.join(","),
-      busqueda: JSON.stringify(active),
-    }).toString();
   return (
     <section className="discovery" aria-labelledby="discovery-title">
       <div className="discovery-intro">
@@ -439,7 +441,7 @@ export function DiscoveryExplorer() {
           {selected.length ? (
             <div className="discovery-selection">
               <strong>{selected.length} lugares seleccionados</strong>
-              <Button nativeButton={false} render={<Link href={planUrl} />}>
+              <Button onClick={() => onUseSelection(selected, active)}>
                 Planear desde esta selección{" "}
                 <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
               </Button>

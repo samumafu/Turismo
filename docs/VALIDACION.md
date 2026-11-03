@@ -1,5 +1,13 @@
 # Cambio a descubrimiento dinámico · 2 de noviembre de 2026
 
+## Itinerario, cuentas y recuperación · 3 de noviembre de 2026
+
+La búsqueda avanzada ahora publica resultados y selección en el estado compartido, sin navegar a la misma ruta para transferirlos. Las respuestas de chat con lugares se representan aunque no incluyan metadatos `discovery`. La pestaña muestra la agenda por días cuando se genera; antes de eso muestra lugares consultados, progreso, datos pendientes o el error real. Se retiró la imagen del estado vacío. Si Gemini omite una agenda pese a tener perfil completo y candidatos, se usa el planificador por reglas con esos candidatos, identificado como tal.
+
+Comprobaciones: TypeScript, lint y build aprobados; 10 resultados aprobados en `tests/gemini.test.ts`, incluidos agenda omitida y destinos inventados, con HTTP simulado. En navegador con Supabase simulado: recuperación oculta tras cero, uno y dos errores `invalid_credentials`, visible tras el tercero; chat sin `discovery` representa cuatro lugares; agenda de dos días representa cuatro paradas y activa Itinerario; la búsqueda avanzada representa sus cuatro lugares allí. No se enviaron contraseñas de prueba a Supabase real.
+
+En `turismo-seven-mu.vercel.app` la página responde 200 y Supabase tiene correo habilitado y Google deshabilitado. La API de viajes devuelve 404/PGRST205: `public.saved_journeys` no aparece en su caché de esquema; falta ejecutar el SQL en el proyecto conectado. Una única solicitud real a `/api/chat` devolvió 503 por falta de respuesta de OpenStreetMap. Por eso no se certifica el flujo completo de guardado ni la entrega de correo Brevo. Los cambios locales necesitan desplegarse para actualizar Vercel.
+
 ## Mapa principal y origen GPS · 3 de noviembre de 2026
 
 Se eliminó la pestaña “Lugares”. Mapa es la vista inicial y aparece antes del chat en móviles. La ubicación se pide mediante un botón y permiso del navegador; no se persiste ni se envía a Gemini. La política HTTP permite geolocalización solo al propio sitio. Se muestran precisión, denegación, errores y controles para actualizar o dejar de usar la posición.

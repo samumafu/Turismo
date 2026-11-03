@@ -7,11 +7,17 @@ import { cop, mapsLink } from "@/lib/places";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { missingFields } from "@/lib/schemas";
 
 export function ItineraryPanel() {
   const { state } = usePlanner();
   const { itinerary, profile } = state;
   const placeById = new Map(state.places.map((p) => [p.id, p]));
+  const discovered = state.results.length
+    ? state.results
+    : !itinerary
+      ? state.places
+      : [];
   function download() {
     if (!itinerary) return;
     const blob = new Blob(
@@ -36,7 +42,7 @@ export function ItineraryPanel() {
     a.click();
     URL.revokeObjectURL(url);
   }
-  if ((!itinerary || state.action === "explore") && state.results.length)
+  if ((!itinerary || state.action === "explore") && discovered.length)
     return (
       <div className="itinerary-panel">
         <div className="itinerary-heading">
@@ -50,7 +56,7 @@ export function ItineraryPanel() {
           </div>
         </div>
         <ol className="stop-list">
-          {state.results.map((place, index) => (
+          {discovered.map((place, index) => (
             <li key={place.id} className="stop-row">
               <div className="stop-clock">
                 <span className="stop-dot">{index + 1}</span>
@@ -59,7 +65,7 @@ export function ItineraryPanel() {
                 <div className="stop-meta">
                   {place.category} <span>{place.region}</span>
                 </div>
-                <h4>{place.name}</h4>
+                <h3>{place.name}</h3>
                 <p>{place.description}</p>
                 <a
                   className="maps-link"
@@ -79,22 +85,26 @@ export function ItineraryPanel() {
     );
   if (!itinerary)
     return (
-      <div className="planner-empty">
-        <Image
-          src="/images/las-lajas.jpg"
-          fill
-          sizes="(max-width: 760px) 100vw, 65vw"
-          alt="Montañas y campos del entorno de Las Lajas"
-        />
-        <div className="planner-empty-content">
-          <Compass size={34} strokeWidth={1.3} aria-hidden="true" />
-          <h2>
-            El sur está lleno
-            <br />
-            de posibilidades.
-          </h2>
-          <p>Tu itinerario aparecerá aquí cuando lo construyas en el chat.</p>
-        </div>
+      <div className="itinerary-panel itinerary-pending" aria-live="polite">
+        <Compass size={30} strokeWidth={1.3} aria-hidden="true" />
+        <h2>{state.busy ? "Preparando tu viaje…" : "Tu itinerario"}</h2>
+        <p>
+          {state.error ??
+            (state.action === "clarify" && state.messages.length > 1
+              ? "Completa los datos del viaje en el chat para organizar las visitas por días."
+              : state.discovery?.total === 0
+                ? "No encontramos lugares con esta búsqueda. Cambia la zona o los filtros en el chat."
+                : "Los lugares que encuentres en el chat o en la búsqueda avanzada aparecerán aquí. Al planificar el viaje, verás sus días, actividades y horarios sugeridos.")}
+        </p>
+        {state.action === "clarify" &&
+        state.messages.length > 1 &&
+        !state.busy ? (
+          <ul>
+            {missingFields(profile).map((field) => (
+              <li key={field}>{field}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     );
   const groupBudget =

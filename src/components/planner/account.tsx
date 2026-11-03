@@ -19,6 +19,7 @@ export function Account() {
   const [mode, setMode] = useState<FormMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loginFailures, setLoginFailures] = useState(0);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -103,6 +104,12 @@ export function Account() {
         return;
       }
       const parsed = journeySnapshotSchema.safeParse(data?.journey);
+      if (data && !parsed.success) {
+        setMessage(
+          "El viaje guardado no se pudo interpretar. El viaje actual sigue abierto.",
+        );
+        return;
+      }
       setSavedAvailable(parsed.success);
       const existing = current.current.state;
       const hasOpenJourney =
@@ -119,10 +126,8 @@ export function Account() {
         setMessage(
           "Tienes un viaje guardado. Puedes abrirlo o guardar el actual.",
         );
-      } else if (!hasOpenJourney) {
-        setSyncEnabled(true);
       } else {
-        setMessage("Guarda el viaje actual para conservarlo en tu cuenta.");
+        setSyncEnabled(true);
       }
     })();
     return () => {
@@ -196,7 +201,12 @@ export function Account() {
           email: email.trim(),
           password,
         });
-        if (error) throw error;
+        if (error) {
+          if (error.code === "invalid_credentials")
+            setLoginFailures((count) => count + 1);
+          throw error;
+        }
+        setLoginFailures(0);
         setPassword("");
         setOpen(false);
       } else if (mode === "register") {
@@ -248,6 +258,7 @@ export function Account() {
         if (updateError) throw updateError;
         setPassword("");
         setCode("");
+        setLoginFailures(0);
         setMode("login");
         setMessage("Contraseña actualizada.");
       }
@@ -413,15 +424,17 @@ export function Account() {
               <div className="account-links">
                 {mode === "login" ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode("forgot");
-                        setMessage("");
-                      }}
-                    >
-                      ¿Olvidaste tu contraseña?
-                    </button>
+                    {loginFailures >= 3 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("forgot");
+                          setMessage("");
+                        }}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => {

@@ -669,43 +669,24 @@
   min-height: 36px;
   padding-inline: 12px;
 }
-.planner-empty {
-  min-height: 640px;
-  position: relative;
-  display: grid;
-  align-items: center;
-  overflow: hidden;
+.itinerary-pending {
+  min-height: 360px;
 }
-.planner-empty > img {
-  object-fit: cover;
-  object-position: 45% 60%;
+.itinerary-pending h2 {
+  font-size: 32px;
+  margin-block: 18px;
 }
-.planner-empty::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(9, 35, 29, 0.67);
-}
-.planner-empty-content {
-  position: relative;
-  z-index: 1;
-  padding: 44px;
-  color: var(--photo-ink);
-  max-width: 600px;
-}
-.planner-empty-content > svg {
-  color: var(--accent);
-  margin-bottom: 24px;
-}
-.planner-empty-content > h2 {
-  font-size: clamp(35px, 3.5vw, 49px);
-  line-height: 1.15;
-}
-.planner-empty-content > p {
+.itinerary-pending p,
+.itinerary-pending li {
   font-size: 13px;
-  line-height: 1.9;
-  margin-top: 20px;
-  max-width: 350px;
+  line-height: 1.8;
+  color: var(--muted-foreground);
+  max-width: 560px;
+}
+.itinerary-pending ul {
+  margin-top: 18px;
+  padding-left: 20px;
+  list-style: disc;
 }
 .itinerary-panel {
   padding: 28px 30px 35px;
@@ -858,6 +839,7 @@
 .stop-meta span {
   color: var(--muted-foreground);
 }
+.stop-place h3,
 .stop-place h4 {
   font-size: 20px;
   font-family: var(--font-display);
@@ -1206,15 +1188,6 @@
   .chat-feedback [data-slot="alert-description"] {
     font-size: 11px;
   }
-  .planner-empty {
-    min-height: 560px;
-  }
-  .planner-empty-content {
-    padding: 28px;
-  }
-  .planner-empty-content > h2 {
-    font-size: 39px;
-  }
   .itinerary-panel {
     padding: 22px 18px;
   }
@@ -1236,6 +1209,7 @@
   .stop-clock {
     width: 35px;
   }
+  .stop-place h3,
   .stop-place h4 {
     font-size: 21px;
   }

@@ -42,6 +42,7 @@ test("OSM discovery, cache, Gemini grounding and failure paths with simulated HT
   let modelCalls = 0;
   let failModel = false;
   let phantom = false;
+  let omitAgenda = false;
   let lastCandidates: unknown[] = [];
   const mocked = mock.method(
     globalThis,
@@ -96,6 +97,7 @@ test("OSM discovery, cache, Gemini grounding and failure paths with simulated HT
         );
         if (phantom)
           reply.itinerary!.days[0].stops[0].placeId = "osm:node:999999999";
+        if (omitAgenda) reply.itinerary = null;
         result = reply;
       }
       return Response.json({
@@ -184,6 +186,31 @@ test("OSM discovery, cache, Gemini grounding and failure paths with simulated HT
         assert.ok(lastCandidates.length > 0);
         assert.equal(modelCalls - before, 2);
         assert.equal(result.places[0].id, "osm:node:910000001");
+      },
+    );
+    await t.test(
+      "complete profile and observed places produce an agenda even if Gemini omits it",
+      async () => {
+        const now = Date.now();
+        const clock = mock.method(Date, "now", () => now + 61000);
+        omitAgenda = true;
+        try {
+          const result = chatResponseSchema.parse(
+            await (await chat(request(input))).json(),
+          );
+          assert.equal(result.mode, "demo");
+          assert.ok(result.itinerary?.days.length);
+          assert.ok(
+            result.itinerary!.days.every((day) =>
+              day.stops.every((stop) =>
+                result.places.some((place) => place.id === stop.placeId),
+              ),
+            ),
+          );
+        } finally {
+          omitAgenda = false;
+          clock.mock.restore();
+        }
       },
     );
     await t.test(

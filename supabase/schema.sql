@@ -14,3 +14,6 @@ create policy "Users manage their own journey" on public.saved_journeys
   for all to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-- Actualiza la API REST tras crear la tabla.
+notify pgrst, 'reload schema';

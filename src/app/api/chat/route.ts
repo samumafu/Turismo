@@ -162,6 +162,19 @@ export async function POST(request: Request) {
       try {
         reply = await geminiReply(input, key, candidates);
         mode = "gemini";
+        if (
+          !reply.itinerary &&
+          !missingFields(reply.profile).length &&
+          candidates.length
+        ) {
+          reply = dynamicReply(
+            { ...input, profile: reply.profile },
+            candidates,
+          );
+          mode = "demo";
+          notice =
+            "La IA no generó la agenda. Se organizó una propuesta por reglas con los mismos lugares consultados.";
+        }
       } catch (error) {
         notice = geminiFailureNotice(error);
       }

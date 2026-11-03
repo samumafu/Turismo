@@ -26,6 +26,7 @@ import {
   placeSchema,
   searchSpecSchema,
   type Place,
+  type SearchResponse,
   type SearchSpec,
 } from "@/lib/places";
 
@@ -67,6 +68,8 @@ type PlannerContextValue = {
     reset: () => void;
     restore: () => void;
     loadJourney: (snapshot: JourneySnapshot) => boolean;
+    discover: (result: SearchResponse) => void;
+    selectPlaces: (ids: string[], search: SearchSpec) => void;
   };
   meta: { maxMessageLength: number };
 };
@@ -166,7 +169,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         action: result.action,
-        results: result.discovery ? result.places : s.results,
+        results:
+          result.discovery || result.places.length ? result.places : s.results,
         discovery: result.discovery ?? s.discovery,
         places: [
           ...new Map(
@@ -190,7 +194,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         profile: result.profile,
         itinerary:
           result.itinerary ??
-          (result.action === "clarify" &&
+          ((result.action === "clarify" || result.action === "plan") &&
           s.itinerary &&
           !validatePlan(s.itinerary, result.profile, s.places)
             ? null
@@ -250,12 +254,52 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     }));
     return true;
   }
+  function discover(result: SearchResponse) {
+    if (lock.current) return;
+    setState((s) => ({
+      ...s,
+      action: "explore",
+      results: result.places,
+      places: [
+        ...new Map(
+          [...s.places, ...result.places].map((p) => [p.id, p]),
+        ).values(),
+      ]
+        .filter(
+          (p) =>
+            result.places.some((v) => v.id === p.id) ||
+            s.itinerary?.days.some((d) =>
+              d.stops.some((stop) => stop.placeId === p.id),
+            ),
+        )
+        .slice(0, 75),
+      search: result.spec,
+      selectedIds: [],
+      notice: result.notice,
+      error: null,
+      discovery: {
+        total: result.total,
+        source: result.source,
+        observedAt: result.observedAt,
+      },
+    }));
+  }
+  function selectPlaces(ids: string[], search: SearchSpec) {
+    if (lock.current) return;
+    setState((s) => ({
+      ...s,
+      action: "explore",
+      selectedIds: ids,
+      search,
+      results: s.places.filter((p) => ids.includes(p.id)),
+    }));
+  }
   return (
     <PlannerContext
       value={{
         location,
         state,
-        actions: { send, reset, restore, loadJourney },
+        actions: { send, reset, restore, loadJourney, discover, selectPlaces },
         meta: { maxMessageLength: 2500 },
       }}
     >
