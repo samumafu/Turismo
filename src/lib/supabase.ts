@@ -9,6 +9,9 @@ export const accountsConfigured = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 );
 
+export const passwordRecoveryEnabled =
+  process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_ENABLED === "true";
+
 export function browserSupabase() {
   if (typeof window === "undefined") return null;
   if (client !== undefined) return client;

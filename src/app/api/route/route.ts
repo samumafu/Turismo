@@ -10,7 +10,7 @@ import {
 } from "@/lib/server/guard";
 
 // A cold instance may need to resolve the OSM IDs before requesting OSRM.
-export const maxDuration = 30;
+export const maxDuration = 50;
 const schema = z
   .object({
     placeIds: z.array(osmIdSchema).min(1).max(5),

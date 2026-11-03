@@ -98,7 +98,8 @@ export const searchResponseSchema = z.object({
   truncated: z.boolean(),
   nextOffset: z.number().nullable(),
   spec: searchSpecSchema,
-  source: z.enum(["overpass", "cache", "stale-cache"]),
+  source: z.enum(["overpass", "photon", "cache", "stale-cache"]),
+  provider: z.string().max(200).optional(),
   observedAt: z.string(),
   notice: z.string().nullable(),
 });

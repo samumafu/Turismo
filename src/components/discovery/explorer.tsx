@@ -94,7 +94,7 @@ export function DiscoveryExplorer({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: input, spec: next, offset }),
-        signal: AbortSignal.any([current.signal, AbortSignal.timeout(22000)]),
+        signal: AbortSignal.any([current.signal, AbortSignal.timeout(42000)]),
       });
       const body = await response.json();
       if (!response.ok)
@@ -115,7 +115,9 @@ export function DiscoveryExplorer({
       if (!current.signal.aborted)
         setError(
           e instanceof Error
-            ? e.message
+            ? e.name === "TimeoutError"
+              ? "La búsqueda tardó demasiado. Espera un minuto y vuelve a intentar."
+              : e.message
             : "La búsqueda no respondió. Vuelve a intentar.",
         );
     } finally {
@@ -271,9 +273,11 @@ export function DiscoveryExplorer({
               <span>
                 {result.source === "overpass"
                   ? "Consulta OSM"
-                  : result.source === "stale-cache"
-                    ? "Caché temporal anterior"
-                    : "Caché temporal OSM"}
+                  : result.source === "photon"
+                    ? "Índice Photon / OpenStreetMap"
+                    : result.source === "stale-cache"
+                      ? "Caché temporal anterior"
+                      : "Caché temporal OSM"}
               </span>
             ) : null}
           </div>

@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
 import { LogIn, LogOut, Save, UserRound } from "lucide-react";
-import { accountsConfigured, browserSupabase } from "@/lib/supabase";
+import {
+  accountsConfigured,
+  browserSupabase,
+  passwordRecoveryEnabled,
+} from "@/lib/supabase";
+import { authErrorMessage } from "@/lib/auth-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -237,6 +242,12 @@ export function Account() {
         );
         if (!data.session) setMode("login");
       } else if (mode === "forgot") {
+        if (!passwordRecoveryEnabled) {
+          setMessage(
+            "La recuperación de contraseña estará disponible próximamente.",
+          );
+          return;
+        }
         const { error } = await supabase.auth.resetPasswordForEmail(
           email.trim(),
         );
@@ -262,7 +273,7 @@ export function Account() {
         setMode("login");
         setMessage("Contraseña actualizada.");
       }
-    } catch {
+    } catch (error) {
       if (mode === "register") {
         try {
           sessionStorage.removeItem(pendingJourneyKey);
@@ -270,13 +281,7 @@ export function Account() {
           /* Storage may be unavailable. */
         }
       }
-      setMessage(
-        mode === "login"
-          ? "No se pudo iniciar sesión. Comprueba tus datos y la confirmación del correo."
-          : mode === "code"
-            ? "No se pudo cambiar la contraseña. Comprueba el código o solicita otro."
-            : "No se pudo completar la solicitud. Revisa tus datos e inténtalo de nuevo.",
-      );
+      setMessage(authErrorMessage(error, mode));
     } finally {
       setBusy(false);
     }
@@ -428,6 +433,12 @@ export function Account() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (!passwordRecoveryEnabled) {
+                            setMessage(
+                              "La recuperación de contraseña estará disponible próximamente.",
+                            );
+                            return;
+                          }
                           setMode("forgot");
                           setMessage("");
                         }}

@@ -31,9 +31,14 @@ export default function Sources() {
               <a href="https://overpass.private.coffee/">
                 Overpass de Private.coffee
               </a>
-              . Cada lugar conserva su identificador, enlace de origen,
-              coordenadas y fecha de consulta. Las coordenadas de áreas y
-              edificios son su centro cartográfico, no una entrada garantizada.
+              . Cuando Overpass no responde, una búsqueda interactiva puede
+              utilizar el índice{" "}
+              <a href="https://photon.komoot.io/">Photon de Komoot</a>, también
+              basado en OSM. Sus resultados tienen menor cobertura y se
+              identifican como búsqueda alternativa. Cada lugar conserva su
+              identificador, enlace de origen, coordenadas y fecha de consulta.
+              Las coordenadas de áreas y edificios son su centro cartográfico,
+              no una entrada garantizada.
             </p>
             <p>
               OSM es un mapa comunitario: puede tener datos incompletos,
@@ -48,6 +53,10 @@ export default function Sources() {
               explorar otras zonas. No se descarga todo el departamento. Cada
               página muestra hasta 50 resultados, con un máximo de 500 por
               consulta; cambia de zona o filtro para continuar explorando.
+              Photon devuelve como máximo 50 coincidencias por búsqueda y no
+              permite recorrer todo el departamento por paginación. Sus
+              resultados se filtran por radio, categoría, país y departamento
+              declarado. No se deduce gastronomía regional sin evidencia.
             </p>
             <p>
               Las etiquetas usadas incluyen tourism, historic, leisure, natural,
@@ -196,6 +205,10 @@ export default function Sources() {
               <a href="https://overpass.private.coffee/#privacy">
                 política de Private.coffee
               </a>
+              . Si se utiliza Photon, Komoot recibe los filtros y el nombre
+              buscado, sin presupuesto ni conversación. Su servicio público
+              requiere{" "}
+              <a href="https://photon.komoot.io/#terms-of-use">uso razonable</a>
               . Los mapas, OSRM y Google Maps tienen sus propias políticas.
             </p>
           </section>

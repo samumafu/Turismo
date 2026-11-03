@@ -27,10 +27,10 @@ La aplicación funciona sin configuración adicional como invitado. Para activar
 
 1. Crea un proyecto **Free** en [Supabase](https://supabase.com/pricing) y ejecuta el archivo `supabase/schema.sql` en su SQL Editor. Sus políticas RLS restringen cada registro al dueño.
 2. Copia la URL del proyecto y su clave **publishable** (o anon) a `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`; reinicia Next.js. Configura las mismas variables en Vercel y vuelve a desplegar. Son valores públicos: nunca uses la clave `service_role` en el navegador.
-3. En Authentication habilita correo y contraseña. Si mantienes la confirmación de correo, configura Site URL y Redirect URLs para tus direcciones local y desplegada. Sin SMTP externo, Supabase limita los destinatarios y la frecuencia de correo.
-4. En Authentication → SMTP configura Brevo con sus credenciales **SMTP**, remitente verificado y el host/puerto indicados en Brevo. En Authentication → Email Templates → Reset Password incluye `{{ .Token }}` para enviar el código; sin ese cambio el correo predeterminado puede contener un enlace en lugar del código que solicita la interfaz.
+3. **Etapa actual, sin Brevo:** en Authentication → Sign In / Providers → Email habilita correo/contraseña y desactiva **Confirm email**. Guarda los cambios. Esta opción es del servidor Supabase; ninguna variable de Next.js la desactiva. Los registros nuevos reciben sesión inmediata. Las cuentas que ya quedaron pendientes de confirmación pueden requerir confirmación por el administrador. La tabla `saved_journeys` es independiente del registro y del acceso.
+4. **Más adelante:** configura Site URL y Redirect URLs, y en Authentication → SMTP configura Brevo con sus credenciales **SMTP** y remitente verificado. En Authentication → Email Templates → Reset Password incluye `{{ .Token }}`. Después habilita `NEXT_PUBLIC_PASSWORD_RECOVERY_ENABLED=true` en Vercel y vuelve a desplegar. Hasta entonces la recuperación permanece pausada y no envía correos.
 
-El botón de Google está deshabilitado hasta implementar el acceso OAuth y configurar el proveedor. Las credenciales de Google y Brevo se configuran en Supabase, no en el navegador ni en este repositorio. La recuperación usa el código de un solo uso de Supabase y Brevo actúa como proveedor de envío SMTP. «¿Olvidaste tu contraseña?» aparece después de tres respuestas `invalid_credentials`; los fallos de red y configuración no cuentan.
+El botón de Google está deshabilitado hasta implementar el acceso OAuth y configurar el proveedor. Las credenciales de Google y Brevo se configuran en Supabase, no en el navegador ni en este repositorio. La recuperación usa el código de un solo uso de Supabase y Brevo actúa como proveedor de envío SMTP cuando se habilite. «¿Olvidaste tu contraseña?» aparece después de tres respuestas `invalid_credentials`; los fallos de red y configuración no cuentan. Con la recuperación pausada, el enlace informa que estará disponible próximamente.
 
 Si el guardado devuelve `PGRST205` o «Could not find the table public.saved_journeys», ejecuta `supabase/schema.sql` en el **mismo proyecto** al que apunta la URL configurada en Vercel. Configurar Auth no crea automáticamente la tabla de viajes.
 
@@ -68,11 +68,15 @@ El proveedor predeterminado es [Overpass de Private.coffee](https://overpass.pri
 
 ```dotenv
 OVERPASS_API_URL=https://overpass.private.coffee/api/interpreter
+OVERPASS_FALLBACK_URL=disabled
+PHOTON_FALLBACK_ENABLED=true
 # Para identificar el proyecto al proveedor; Vercel también aporta VERCEL_URL.
 APP_PUBLIC_URL=https://tu-proyecto.vercel.app
 ```
 
-El servidor envía un User-Agent identificable. Una consulta está limitada a 12 s de ejecución en Overpass, 15 s de red, 16 MiB de memoria remota declarada y 3 MB de respuesta descargada. No hay reintentos automáticos ni rotación de proveedores para evadir cuotas. Se espacia el inicio de solicitudes al menos 1,6 s, se limita a 15/minuto y se pausa un minuto ante 406/429/503/504. Solicitudes simultáneas idénticas comparten la misma consulta.
+El servidor envía un User-Agent identificable. Una consulta está limitada a 12 s de ejecución en Overpass, 15 s de red, 16 MiB de memoria remota declarada y 3 MB de respuesta descargada. Se espacia el inicio de solicitudes al menos 1,6 s y se limita a 15/minuto. Ante 401/403/406/429 se pausa y no se consulta ningún respaldo para evadir restricciones. Una caída de red o un 5xx abre un circuito de un minuto; se puede configurar una segunda instancia mediante `OVERPASS_FALLBACK_URL`, sin repetir solicitudes al mismo servidor. Solicitudes simultáneas idénticas comparten la consulta.
+
+Si Overpass está caído, las búsquedas interactivas usan [Photon de Komoot](https://photon.komoot.io/), otro índice de datos OSM sin clave ni cuenta. Se limita a 10 solicitudes/minuto, una por 1,5 s, 8 s de espera y 1 MB descargado. Solo acepta IDs OSM, categorías solicitadas y puntos dentro del radio y de Nariño según los datos del índice. Devuelve hasta 50 coincidencias y muestra un aviso de cobertura limitada; no ofrece extracción exhaustiva ni paginación adicional. Los precios, horarios y gastronomía regional siguen sin verificarse. El índice no contiene todas las etiquetas de acceso: confirma entradas. Puedes desactivarlo con `PHOTON_FALLBACK_ENABLED=false`. Los IDs consultados alimentan el mapa y Gemini; las rutas en instancias frías todavía necesitan resolver sus IDs mediante Overpass y pueden usar el enlace externo si no está disponible.
 
 Caché de búsqueda: 15 minutos, hasta 40 consultas; registro temporal: hasta 2000 lugares y 24 horas. Si falla el proveedor y existe una respuesta para **esa misma búsqueda** de menos de 24 horas, se devuelve etiquetada como caché anterior. Sin datos consultados, se muestra un error con opción de reintento. **No se generan destinos de relleno.** La caché está en memoria, se puede perder al reiniciar y no está compartida entre instancias de Vercel; este prototipo está dimensionado para bajo tráfico universitario.
 

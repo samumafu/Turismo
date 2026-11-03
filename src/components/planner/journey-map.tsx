@@ -161,7 +161,7 @@ function RoutingMap({
           body: query,
           signal: AbortSignal.any([
             controller.signal,
-            AbortSignal.timeout(35000),
+            AbortSignal.timeout(55000),
           ]),
         });
         const body = await result.json();

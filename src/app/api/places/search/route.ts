@@ -6,7 +6,7 @@ import {
   HttpError,
   readJson,
 } from "@/lib/server/guard";
-export const maxDuration = 20;
+export const maxDuration = 40;
 export async function POST(request: Request) {
   try {
     guardRequest(request, "discovery");

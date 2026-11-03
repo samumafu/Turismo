@@ -1,5 +1,13 @@
 # Cambio a descubrimiento dinámico · 2 de noviembre de 2026
 
+## Recuperación de búsquedas ante caída de Overpass · 3 de noviembre de 2026
+
+Se confirmó el 503 del despliegue al consultar museos de Pasto sin Gemini. Una consulta directa pequeña a Private.coffee también agotó el tiempo de espera. El transporte ahora valida respuestas, aplica un circuito de un minuto y permite un segundo Overpass configurable solo ante caída de red/5xx; 401/403/406/429 detienen la operación sin cambiar de proveedor. Los registros de diagnóstico solo incluyen host y causa técnica, sin nombres buscados ni conversaciones.
+
+Si Overpass está caído, las búsquedas interactivas consultan Photon de Komoot, con límites de frecuencia, radio, país, departamento, categoría, 50 resultados, 8 s y 1 MB. Se informa su cobertura limitada y se mantienen IDs OSM, fuentes y coordenadas del proveedor. No se atribuyen precios, horarios ni gastronomía regional. No se añadió un catálogo de destinos. Las rutas que necesitan volver a resolver IDs en una instancia fría aún dependen de Overpass y conservan el enlace externo.
+
+Validación real local: `discoverPlaces` recuperó `osm:way:175637820`, Museo del Carnaval, mediante Photon tras el timeout de Overpass. En Chrome la búsqueda avanzada mostró ese lugar en el mapa y en Itinerario. `POST /api/chat` en modo por reglas devolvió 200 con una agenda de un día sobre ese registro real; no consumió Gemini. TypeScript, lint y build aprobados. Pruebas simuladas de transporte y normalización cubren caída, pausa de cuotas, rechazo de HTML, tamaño de respuesta y descarte de lugares fuera de Nariño/radio/categoría. Los cambios requieren desplegarse antes de comprobar el mismo flujo en Vercel.
+
 ## Itinerario, cuentas y recuperación · 3 de noviembre de 2026
 
 La búsqueda avanzada ahora publica resultados y selección en el estado compartido, sin navegar a la misma ruta para transferirlos. Las respuestas de chat con lugares se representan aunque no incluyan metadatos `discovery`. La pestaña muestra la agenda por días cuando se genera; antes de eso muestra lugares consultados, progreso, datos pendientes o el error real. Se retiró la imagen del estado vacío. Si Gemini omite una agenda pese a tener perfil completo y candidatos, se usa el planificador por reglas con esos candidatos, identificado como tal.

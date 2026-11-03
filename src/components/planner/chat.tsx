@@ -150,7 +150,7 @@ export function ChatPanel() {
       {state.error ? (
         <div className="chat-feedback">
           <Alert variant="destructive">
-            <AlertTitle>No se envió el mensaje</AlertTitle>
+            <AlertTitle>No se pudo completar la solicitud</AlertTitle>
             <AlertDescription>{state.error}</AlertDescription>
           </Alert>
         </div>
