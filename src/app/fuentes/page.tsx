@@ -1,0 +1,207 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { SiteHeader, SiteFooter } from "@/components/site-shell";
+export const metadata: Metadata = { title: "Datos, fuentes y privacidad" };
+export default function Sources() {
+  return (
+    <>
+      <SiteHeader />
+      <main id="main" className="sources-page shell">
+        <header className="page-intro">
+          <span className="section-kicker">Explorar con criterio</span>
+          <h1>
+            El territorio cambia.
+            <br />
+            La información también.
+          </h1>
+          <p>
+            Los lugares se consultan en OpenStreetMap al buscar. No mantenemos
+            una lista manual de atractivos.
+          </p>
+        </header>
+        <div className="sources-body">
+          <section>
+            <h2>De dónde vienen los lugares</h2>
+            <p>
+              Los resultados provienen de{" "}
+              <a href="https://www.openstreetmap.org/copyright">
+                OpenStreetMap, © sus colaboradores, licencia ODbL
+              </a>
+              , consultado mediante{" "}
+              <a href="https://overpass.private.coffee/">
+                Overpass de Private.coffee
+              </a>
+              . Cada lugar conserva su identificador, enlace de origen,
+              coordenadas y fecha de consulta. Las coordenadas de áreas y
+              edificios son su centro cartográfico, no una entrada garantizada.
+            </p>
+            <p>
+              OSM es un mapa comunitario: puede tener datos incompletos,
+              desactualizados o erróneos. “Encontrado en OSM” no significa
+              inspeccionado, abierto, seguro o disponible. La falta de
+              resultados tampoco significa que no existan lugares en esa zona.
+            </p>
+            <p>
+              La búsqueda cubre el área administrativa de Nariño, en radios de
+              500 metros a 25 kilómetros. Los centros de municipios son
+              referencias aproximadas para iniciar búsquedas; el mapa permite
+              explorar otras zonas. No se descarga todo el departamento. Cada
+              página muestra hasta 50 resultados, con un máximo de 500 por
+              consulta; cambia de zona o filtro para continuar explorando.
+            </p>
+            <p>
+              Las etiquetas usadas incluyen tourism, historic, leisure, natural,
+              waterway, amenity y cuisine. Para “restaurantes típicos” se exigen
+              etiquetas de cocina regional/local/colombiana; no se atribuye
+              autenticidad gastronómica a sitios sin ese dato.
+            </p>
+            <Link href="/planificar">Volver al planificador</Link>
+          </section>
+          <section>
+            <h2>Caché temporal, sin catálogo manual</h2>
+            <p>
+              El servidor mantiene por 15 minutos las respuestas de búsqueda y
+              durante un máximo de 24 horas los registros ya consultados. Si
+              Overpass falla y existe una respuesta anterior para la misma
+              consulta, se identifica claramente como caché antigua. Sin datos
+              consultados, se informa el error: no se crean lugares de relleno.
+            </p>
+            <p>
+              La caché vive en memoria, está acotada y puede desaparecer al
+              reiniciar. El plan permanece únicamente en la sesión abierta del
+              navegador. Al modificar o calcular rutas, el servidor resuelve sus
+              IDs en datos OSM consultados, sin aceptar coordenadas de destinos
+              enviadas por el navegador como prueba de ubicación. El origen GPS
+              sí procede del permiso de ubicación del dispositivo.
+            </p>
+          </section>
+          <section>
+            <h2>La IA y los límites de la propuesta</h2>
+            <p>
+              Con una clave configurada, Gemini interpreta zona y categorías y
+              después recibe hasta 50 candidatos relevantes obtenidos de OSM.
+              Solo puede seleccionar sus identificadores; la interfaz representa
+              las coordenadas y nombres originales. Las etiquetas de OSM y la
+              conversación se tratan como datos, nunca como instrucciones del
+              sistema.
+            </p>
+            <p>
+              Sin clave o si Gemini falla se usa búsqueda OSM y planificación
+              por reglas, señalada como “sin IA”. Si faltan datos del viaje, se
+              pregunta antes de construir el itinerario. Las recomendaciones de
+              IA y por reglas son orientativas, no reservas ni cotizaciones.
+            </p>
+            <p>
+              No inventamos precios, teléfonos o disponibilidad. Un horario de
+              OSM se presenta como declaración comunitaria por confirmar; la
+              hora propuesta en la agenda no es un horario de apertura. El
+              reparto del presupuesto es una provisión aritmética, no una tarifa
+              de mercado. Confirma rutas y traslados reales; el margen entre
+              visitas no representa un tiempo de viaje medido.
+            </p>
+            <p>
+              No se programan ingresos a sitios marcados privados o
+              restringidos, ni ascensos a volcanes. La Corota se excluye por la{" "}
+              <a href="https://www.parquesnacionales.gov.co/sala-prensa/resolucion-590-de-31-de-diciembre-de-2025/">
+                resolución 590 de 2025
+              </a>
+              ; confirma cualquier cambio con Parques Nacionales.
+            </p>
+          </section>
+          <section>
+            <h2>Mapas y proveedores</h2>
+            <p>
+              Leaflet visualiza las teselas de OpenStreetMap con atribución
+              visible. Solo se piden las teselas necesarias para la vista, sin
+              descarga masiva ni uso offline, siguiendo su{" "}
+              <a href="https://operations.osmfoundation.org/policies/tiles/">
+                política de uso
+              </a>
+              . Los grupos del mapa reúnen puntos cercanos; no representan
+              rutas.
+            </p>
+            <p>
+              Los recorridos se consultan a{" "}
+              <a href="https://routing.openstreetmap.de/about.html">
+                FOSSGIS / OSRM
+              </a>
+              , con perfiles separados para carro y caminata. Al activar tu
+              ubicación se traza una ruta hacia el destino seleccionado o las
+              paradas del día, en orden. Cambiar destino o modo actualiza la
+              ruta con límites de frecuencia. Solo se dibuja la geometría
+              devuelta por el proveedor; confirma accesos finales a sitios
+              naturales. El transporte público y las rutas no disponibles tienen
+              enlaces externos de Google Maps, sin Google Places ni API de pago.
+            </p>
+            <p>
+              Overpass y OSRM son servicios compartidos sin garantía de
+              disponibilidad. Las búsquedas se disparan con una acción tuya,
+              nunca automáticamente en cada movimiento del mapa; se limitan por
+              radio, cantidad, tiempo y frecuencia. El servicio es un prototipo
+              de bajo tráfico. Consulta los{" "}
+              <a href="https://overpass.private.coffee/#terms">
+                términos de Overpass
+              </a>
+              .
+            </p>
+          </section>
+          <section id="fotografias">
+            <h2>Fotografía de la interfaz</h2>
+            <p>
+              <a href="https://commons.wikimedia.org/wiki/File:Santuario_de_Las_Lajas,_Ipiales,_Colombia,_2015-07-21,_DD_01.JPG">
+                Santuario de Las Lajas y sus alrededores
+              </a>{" "}
+              — Diego Delso,{" "}
+              <a href="https://creativecommons.org/licenses/by-sa/4.0/">
+                CC BY-SA 4.0
+              </a>
+              . Redimensionada y encuadrada según pantalla; conserva su
+              licencia.
+            </p>
+            <p>
+              Esta imagen ilustra la interfaz, no forma una base de lugares. Los
+              resultados OSM no muestran fotografías externas sin una licencia
+              de uso comprobada.
+            </p>
+          </section>
+          <section id="privacidad">
+            <h2>Tu información</h2>
+            <p>
+              La ubicación se solicita al pulsar “Usar mi ubicación y trazar
+              ruta”, con el permiso del navegador. Solo permanece en memoria
+              durante esta sesión: no se guarda en el itinerario ni se envía a
+              Gemini. Puedes actualizarla o dejar de usarla. Al calcular un
+              trayecto, el servidor envía el origen y los destinos al enrutador,
+              que puede conservar registros conforme a su{" "}
+              <a href="https://routing.openstreetmap.de/about.html">
+                política de privacidad
+              </a>
+              . La aplicación no almacena en caché rutas que incluyen tu origen
+              GPS.
+            </p>
+            <p>
+              Sin cuenta, el plan y la conversación se pierden al cerrar o
+              recargar la página. Si creas una cuenta y guardas tu viaje, se
+              almacena en Supabase asociado a tu usuario. La conversación y tu
+              ubicación no forman parte del viaje guardado. No envíes datos
+              personales en búsquedas o conversaciones.
+            </p>
+            <p>
+              Con Gemini, la conversación y los candidatos se envían a Google.
+              El nivel gratuito puede utilizar datos para mejorar productos:
+              revisa sus{" "}
+              <a href="https://ai.google.dev/gemini-api/terms">condiciones</a>.
+              Overpass recibe zona, categorías y nombres buscados; no recibe tu
+              presupuesto ni la conversación. Consulta la{" "}
+              <a href="https://overpass.private.coffee/#privacy">
+                política de Private.coffee
+              </a>
+              . Los mapas, OSRM y Google Maps tienen sus propias políticas.
+            </p>
+          </section>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
+  );
+}
