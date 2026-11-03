@@ -171,6 +171,8 @@ export function DiscoveryExplorer({
                     ...spec,
                     zone: e.target.value as SearchSpec["zone"],
                     center: undefined,
+                    near: undefined,
+                    reference: undefined,
                   });
                   setText("");
                 }}
@@ -430,6 +432,8 @@ export function DiscoveryExplorer({
                   {
                     ...spec,
                     center: view.center,
+                    near: undefined,
+                    reference: undefined,
                     radius: view.radius,
                     name: "",
                   },

@@ -5,6 +5,7 @@ import { discoverPlaces, resolvePlaces } from "../src/lib/server/discovery";
 import { searchSpecSchema } from "../src/lib/places";
 import { dynamicReply, validatePlan } from "../src/lib/planning";
 import { emptyProfile } from "../src/lib/schemas";
+import { rawFixture } from "./fixtures";
 
 const spec = searchSpecSchema.parse({ categories: ["museos"], radius: 3000 });
 const feature = {
@@ -46,7 +47,13 @@ test("Photon retains OSM IDs and rejects outside-region, outside-radius and wron
   assert.equal(places[0].coordinateKind, "center");
   assert.equal(places[0].costCOP, null);
   assert.equal(places[0].openingHours, null);
-  assert.equal(photonUrl(spec).searchParams.get("countrycode"), "CO");
+  assert.equal(photonUrl(spec).pathname, "/reverse");
+  assert.equal(photonUrl(spec).searchParams.get("radius"), "3");
+  assert.equal(photonUrl(spec).searchParams.get("osm_tag"), "tourism:museum");
+  assert.equal(
+    photonUrl({ ...spec, name: "Museo" }).searchParams.get("countrycode"),
+    "CO",
+  );
   assert.equal(photonUrl(spec).searchParams.get("limit"), "50");
   assert.deepEqual(
     normalizePhoton(
@@ -62,13 +69,17 @@ test("a real provider outage uses Photon records for search and grounded rule it
   const previous = process.env.OVERPASS_FALLBACK_URL;
   process.env.OVERPASS_FALLBACK_URL = "disabled";
   const calls: string[] = [];
+  let unavailable = true;
   const upstream = mock.method(
     globalThis,
     "fetch",
     async (input: RequestInfo | URL) => {
       const url = String(input);
       calls.push(url);
-      if (url.includes("/interpreter")) throw new TypeError("network failure");
+      if (url.includes("/interpreter")) {
+        if (unavailable) throw new TypeError("network failure");
+        return Response.json(rawFixture(2));
+      }
       assert.match(url, /photon\.komoot\.io/);
       return Response.json({ features: [feature] });
     },
@@ -100,6 +111,20 @@ test("a real provider outage uses Photon records for search and grounded rule it
     assert.ok(validatePlan(reply.itinerary, reply.profile, result.places));
     assert.equal((await discoverPlaces(spec)).source, "cache");
     assert.equal(calls.length, 2);
+    let now = Date.now() + 61000;
+    const clock = mock.method(Date, "now", () => now);
+    unavailable = false;
+    try {
+      const recovered = await discoverPlaces(spec);
+      assert.equal(recovered.source, "overpass");
+      assert.equal(recovered.places.length, 2);
+      assert.equal(calls.length, 3);
+      now += 61000;
+      assert.equal((await discoverPlaces(spec)).source, "cache");
+      assert.equal(calls.length, 3);
+    } finally {
+      clock.mock.restore();
+    }
   } finally {
     upstream.mock.restore();
     if (previous === undefined) delete process.env.OVERPASS_FALLBACK_URL;

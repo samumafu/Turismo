@@ -60,6 +60,20 @@ Después se completaron los datos en el chat real: 1 día de museos en Pasto, 2 
 
 El chat pregunta los datos faltantes antes de descubrir lugares. La planificación completa con destinos requiere que responda OSM; Gemini y Overpass pueden fallar de forma independiente. Se verificó además que `.env.local` está ignorado por Git y que la clave no aparece en los archivos publicables ni en los recursos estáticos de producción.
 
+## Búsqueda cerca de una referencia, sin GPS · 3 de noviembre de 2026
+
+Prueba local real en Chrome, sin interceptar HTTP: «una cafeteria cerca de la universidad cooperativa de colombia campus pasto». Gemini interpretó la búsqueda y Photon resolvió Universidad Cooperativa de Colombia en `[1.2297579, -77.2898981]`. Tras fallar Overpass, la consulta de proximidad de Photon obtuvo ocho cafeterías OSM. El chat mostró Cafeteria Nueva, La esquina del café y Café Vinotinto con distancias aproximadas en línea recta; el mapa mostró los marcadores agrupados y la pestaña Itinerario los ocho lugares con sus enlaces. No se activó GPS ni se usó un catálogo local.
+
+Se amplió el presupuesto de salida de la interpretación de Gemini, se redujo su razonamiento y se configuró también el timeout del SDK. La llamada de esta prueba funcionó con Gemini real; no garantiza que el proveedor nunca falle. Overpass siguió sin responder y el aviso de cobertura limitada de Photon se conserva. No se verificaron apertura, precios ni una ruta desde GPS.
+
+TypeScript, ESLint y build de producción aprobados; 14 resultados de pruebas específicas aprobados (HTTP simulado para límites, datos ajenos/inexistentes/ambiguos, caché y contratos). Next.js no reportó errores de compilación ni de ejecución en la sesión local. Los cambios de esta etapa no se desplegaron en Vercel.
+
+## Disponibilidad de Overpass y aviso breve · 3 de noviembre de 2026
+
+La consulta mínima `node(613326076)` con el transporte del servidor agotó los 15 segundos contra Private.coffee; una consulta GET con identificación pública también agotó el tiempo. Su endpoint de estado no respondió en 12 segundos. La instancia VK Maps devolvió HTTP 504; no se añadió como respaldo automático. La búsqueda real en el despliegue Vercel respondió HTTP 200 con `source=photon`, por lo que tampoco se observó recuperación de Overpass allí. Esto evidencia falta de respuesta desde las redes probadas, no demuestra una caída global ni identifica la causa interna del proveedor.
+
+Se acortaron los avisos y el TTL de resultados Photon pasó de 15 minutos a uno. Una prueba con HTTP simulado confirma que la siguiente búsqueda consulta Overpass tras esa pausa y vuelve a conservar sus resultados durante 15 minutos si responde. Se mantienen las pausas ante 429/406. TypeScript, lint de los archivos modificados y 14 resultados específicos de pruebas aprobaron. No se volvió a consumir cuota de Gemini ni se desplegaron estos cambios.
+
 ## Referencias
 
 - [Private.coffee: endpoint, términos y uso responsable](https://overpass.private.coffee/).

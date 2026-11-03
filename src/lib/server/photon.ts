@@ -81,15 +81,24 @@ export function photonUrl(spec: SearchSpec) {
   const [lat, lon] = spec.center ?? searchZones[spec.zone].center;
   const dy = spec.radius / 111000;
   const dx = dy / Math.cos((lat * Math.PI) / 180);
-  const url = new URL("https://photon.komoot.io/api/");
+  const url = new URL(
+    spec.name
+      ? "https://photon.komoot.io/api/"
+      : "https://photon.komoot.io/reverse",
+  );
   url.search = new URLSearchParams({
-    q: spec.name || searchZones[spec.zone].label.split(" / ")[0],
     lat: String(lat),
     lon: String(lon),
-    countrycode: "CO",
     limit: "50",
-    bbox: [lon - dx, lat - dy, lon + dx, lat + dy].join(","),
   }).toString();
+  if (spec.name) {
+    url.searchParams.set("q", spec.name);
+    url.searchParams.set("countrycode", "CO");
+    url.searchParams.set(
+      "bbox",
+      [lon - dx, lat - dy, lon + dx, lat + dy].join(","),
+    );
+  } else url.searchParams.set("radius", String(spec.radius / 1000));
   for (const tag of new Set(spec.categories.flatMap((c) => tags[c])))
     url.searchParams.append("osm_tag", tag);
   return url;
@@ -145,10 +154,16 @@ export function normalizePhoton(
     });
     places.push(place);
   }
-  return deduplicatePlaces(places).slice(0, 50);
+  return deduplicatePlaces(places)
+    .sort(
+      (a, b) =>
+        haversine([...center], a.coordinates) -
+        haversine([...center], b.coordinates),
+    )
+    .slice(0, 50);
 }
 
-export async function discoverPhoton(spec: SearchSpec, observedAt: string) {
+export async function requestPhoton(url: URL) {
   if (Date.now() < pausedUntil)
     throw new HttpError(
       503,
@@ -166,7 +181,7 @@ export async function discoverPhoton(spec: SearchSpec, observedAt: string) {
   nextSlot = Date.now() + delay + 1500;
   if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
   try {
-    const response = await fetch(photonUrl(spec), {
+    const response = await fetch(url, {
       headers: {
         Accept: "application/json",
         "User-Agent": `TurismoInteligentePasto/2.0 (+${process.env.APP_PUBLIC_URL || (process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "http://localhost:3000")}/fuentes)`,
@@ -201,14 +216,7 @@ export async function discoverPhoton(spec: SearchSpec, observedAt: string) {
     } finally {
       reader.releaseLock();
     }
-    return {
-      places: normalizePhoton(
-        JSON.parse(Buffer.concat(chunks).toString("utf8")),
-        spec,
-        observedAt,
-      ),
-      truncated: false,
-    };
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
   } catch (error) {
     if (error instanceof HttpError) throw error;
     pausedUntil = Date.now() + 60000;
@@ -218,4 +226,15 @@ export async function discoverPhoton(spec: SearchSpec, observedAt: string) {
       60,
     );
   }
+}
+
+export async function discoverPhoton(spec: SearchSpec, observedAt: string) {
+  return {
+    places: normalizePhoton(
+      await requestPhoton(photonUrl(spec)),
+      spec,
+      observedAt,
+    ),
+    truncated: false,
+  };
 }

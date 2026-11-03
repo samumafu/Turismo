@@ -19,6 +19,8 @@ La única experiencia principal está en `/planificar`; `/` redirige allí y la 
 
 Los filtros manuales y la exploración del mapa se cargan únicamente al abrir **Búsqueda avanzada**. Allí puedes elegir zona, categoría y radio, paginar o pulsar **Buscar en esta zona del mapa**. No se consulta al escribir ni al arrastrar.
 
+También puedes buscar sin GPS: «una cafetería cerca de la Universidad Cooperativa de Colombia campus Pasto». El servidor separa la categoría del punto de referencia, resuelve este último en Photon/OSM y busca alrededor de sus coordenadas (1,5 km por defecto, ajustable por chat). Si no lo encuentra o hay varias sedes, solicita precisar el lugar; no lo sustituye por el centro de la ciudad. Las referencias se consultan dinámicamente y se guardan en caché una hora, hasta 50, sin catálogo manual. El chat muestra nombres reales y distancias aproximadas en línea recta, distintas de una ruta transitable.
+
 En la búsqueda avanzada puedes seleccionar hasta 5 lugares como candidatos. Sin cuenta, el plan se mantiene solo en memoria durante la sesión. Con cuenta puedes guardar un viaje en Supabase y recuperarlo después. Al editar o calcular una ruta, el servidor resuelve los identificadores OSM y no confía en coordenadas de destinos enviadas por el navegador.
 
 ## Cuentas y viaje guardado
@@ -85,6 +87,8 @@ Overpass es compartido y puede rechazar peticiones o estar inaccesible desde det
 Mapa: OpenStreetMap con [atribución y política de teselas](https://operations.osmfoundation.org/policies/tiles/), sin descarga offline ni precarga masiva. FOSSGIS / OSRM proporciona geometría real en carro o a pie desde la ubicación permitida del usuario. Si no se puede calcular un trayecto o se elige transporte público, se ofrece Google Maps mediante URLs externas sin API key. Nunca se representa una recta como ruta transitable.
 
 ## Gemini opcional y costo cero
+
+Overpass sigue siendo el proveedor principal. Los resultados de respaldo de Photon caducan al minuto para que una búsqueda posterior vuelva a probar Overpass después de su pausa; los resultados de Overpass se conservan 15 minutos. La interfaz muestra un aviso breve cuando usa el respaldo. Si también aparece «Modo sin IA», Gemini no participó en esa solicitud: comprueba `GEMINI_API_KEY` en las variables del despliegue Vercel y vuelve a desplegar; `.env.local` solo configura el equipo local.
 
 Copia `.env.example` a `.env.local`, agrega una clave de un proyecto **Free tier sin facturación habilitada** y reinicia:
 

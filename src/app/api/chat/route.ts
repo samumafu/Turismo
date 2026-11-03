@@ -62,9 +62,7 @@ export async function POST(request: Request) {
     input.profile = draft.profile;
     const key = input.demo ? undefined : process.env.GEMINI_API_KEY?.trim();
     let canUseGemini = !!key;
-    let notice: string | null = key
-      ? null
-      : "Asistente sin IA: búsqueda real en OpenStreetMap y planificación por reglas.";
+    let notice: string | null = key ? null : "Modo sin IA.";
     if (key) {
       try {
         const intent = await interpretDiscovery(input, key, search);
@@ -99,11 +97,21 @@ export async function POST(request: Request) {
       });
     }
     const found = await discoverPlaces(search);
+    search = found.spec;
     if (action === "explore") {
-      const context = `${search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ")} en ${searchZones[search.zone].label}${search.center ? " (zona del mapa)" : ""}`;
+      const context = `${search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ")}${search.reference ? ` cerca de ${search.reference.name}` : ` en ${searchZones[search.zone].label}${search.center ? " (zona del mapa)" : ""}`}`;
+      const suggestions = found.places
+        .slice(0, 3)
+        .map((p) => {
+          const meters = search.center
+            ? haversine(search.center, p.coordinates)
+            : null;
+          return `${p.name}${meters !== null ? ` (aprox. ${Math.round(meters / 10) * 10} m en línea recta)` : ""}`;
+        })
+        .join("; ");
       return json({
         message: found.total
-          ? `Encontré ${found.total}${found.truncated ? "+" : ""} coincidencias de ${context}. Te muestro ${found.places.length} lugares con sus ubicaciones. Puedes cambiar la zona, el radio o el tipo de lugar conversando; si quieres un itinerario, dímelo.`
+          ? `Encontré ${found.total}${found.truncated ? "+" : ""} coincidencias de ${context}. ${suggestions}. Puedes verlas en el mapa y en Itinerario. Confirma horarios y acceso antes de ir.`
           : `No encontré coincidencias de ${context} con estos filtros. Podemos ampliar el radio o buscar otra categoría. OSM puede no tener todos los lugares registrados.`,
         profile: input.profile,
         itinerary: null,
@@ -128,6 +136,7 @@ export async function POST(request: Request) {
         s.radius,
         [...s.categories].sort(),
         s.name,
+        s.near ?? null,
         s.regionalFood,
       ]);
     const retainPrevious =

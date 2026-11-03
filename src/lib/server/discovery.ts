@@ -7,6 +7,7 @@ import {
 import { HttpError } from "./guard";
 import { OverpassUnavailableError, queryOverpass } from "./overpass";
 import { discoverPhoton } from "./photon";
+import { resolveSearchReference } from "./search-reference";
 import {
   osmIdSchema,
   searchSpecSchema,
@@ -36,7 +37,7 @@ export async function discoverPlaces(
   raw: SearchSpec,
   offset = 0,
 ): Promise<SearchResponse> {
-  const spec = searchSpecSchema.parse(raw);
+  const spec = await resolveSearchReference(searchSpecSchema.parse(raw));
   if (spec.center)
     spec.center = spec.center.map((n) => Math.round(n * 10000) / 10000) as [
       number,
@@ -71,7 +72,8 @@ export async function discoverPlaces(
           const fresh = {
             ...result,
             observedAt,
-            expires: Date.now() + 15 * 60000,
+            // Retry the primary after its cooldown instead of keeping fallback results for 15 minutes.
+            expires: Date.now() + (origin === "photon" ? 60000 : 15 * 60000),
             provider,
             origin,
           };
@@ -101,13 +103,13 @@ export async function discoverPlaces(
   const end = Math.min(offset + 50, hit.places.length);
   const notice =
     source === "stale-cache"
-      ? "El proveedor no respondió. Se muestran datos OSM guardados temporalmente, de menos de 24 horas."
+      ? "Datos guardados hace menos de 24 horas; proveedor temporalmente no disponible."
       : hit.truncated
-        ? "La consulta alcanzó el límite de 500 registros. Reduce el radio o filtra por nombre/categoría para explorar otros resultados."
+        ? "Se alcanzó el límite de resultados. Reduce el radio o filtra la búsqueda."
         : hit.origin === "photon"
-          ? "Overpass no respondió. Se muestran coincidencias del índice Photon de OpenStreetMap, cuya cobertura es limitada; no representan todos los lugares. No se verifican tarifas, apertura ni gastronomía regional."
+          ? "Búsqueda de respaldo (Photon): cobertura limitada."
           : spec.regionalFood
-            ? "La comida regional se filtra por etiquetas cuisine de OSM. Los lugares sin esa etiqueta no se presentan como típicos."
+            ? "Gastronomía regional según etiquetas de OSM; por confirmar."
             : null;
   return {
     places: hit.places.slice(offset, end),

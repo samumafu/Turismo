@@ -84,6 +84,10 @@ export const searchSpecSchema = z.object({
   radius: z.number().int().min(500).max(25000).default(8000),
   categories: z.array(z.enum(categoryKeys)).min(1).max(3).default(["turismo"]),
   name: z.string().trim().max(80).default(""),
+  near: z.string().trim().max(160).optional(),
+  reference: z
+    .object({ id: osmIdSchema, name: z.string().max(180) })
+    .optional(),
   regionalFood: z.boolean().default(false),
 });
 export type SearchSpec = z.infer<typeof searchSpecSchema>;
@@ -162,6 +166,10 @@ export function interpretSearch(
   if (zone) {
     spec.zone = zone;
     spec.center = undefined;
+    if (zone !== previous.zone) {
+      spec.near = undefined;
+      spec.reference = undefined;
+    }
   }
   const detected: SearchSpec["categories"] = [];
   const patterns: [RegExp, SearchSpec["categories"][number]][] = [
@@ -216,6 +224,7 @@ export function interpretSearch(
   if (named) spec.name = named[1];
   else if (
     text.trim() &&
+    !radius &&
     !zone &&
     !detected.length &&
     !/dia|presupuesto|somos|viajo|cambia|reduce|hora|persona|carro|pie|bus|anade|reemplaza/.test(
@@ -223,5 +232,24 @@ export function interpretSearch(
     )
   )
     spec.name = text.trim().slice(0, 80);
+  const nearby = text.match(
+    /\b(?:cerca(?:no|na|nos|nas)?\s+(?:del?|a)|alrededor\s+de|junto\s+a)\s+(?:(?:la|el|los|las)\s+)?(.+?)(?:[.!?]|$)/i,
+  );
+  if (zone && detected.length && !nearby) {
+    spec.near = undefined;
+    spec.reference = undefined;
+  }
+  if (nearby && detected.length) {
+    const near = nearby[1].trim().slice(0, 160);
+    if (normalize(near) !== normalize(previous.near ?? "")) {
+      spec.center = undefined;
+      spec.reference = undefined;
+    }
+    spec.near = near;
+    if (!radius) spec.radius = 1500;
+    // The reference is not the name of the cafe/restaurant being sought.
+    if (spec.name && normalize(spec.name).includes(normalize(near)))
+      spec.name = "";
+  }
   return searchSpecSchema.parse(spec);
 }
