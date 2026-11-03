@@ -6,6 +6,7 @@ import { Map, List, SlidersHorizontal } from "lucide-react";
 import { PlannerProvider, usePlanner } from "./provider";
 import { ChatPanel } from "./chat";
 import { ItineraryPanel } from "./itinerary";
+import { PlaceOptions } from "./place-options";
 import { Account } from "./account";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,13 +26,17 @@ function Workspace() {
   const [view, setView] = useState("map");
   const [advanced, setAdvanced] = useState(false);
   useEffect(() => {
+    if (state.origin) {
+      if (!state.origin.confirmed) queueMicrotask(() => setView("map"));
+      return;
+    }
     if (state.action !== "clarify")
       queueMicrotask(() =>
         setView(
           state.action === "plan" && state.itinerary ? "itinerary" : "map",
         ),
       );
-  }, [state.action, state.itinerary]);
+  }, [state.action, state.itinerary, state.origin]);
   return (
     <div className="workspace">
       <div className="workspace-top">
@@ -61,6 +66,7 @@ function Workspace() {
             </TabsContent>
             <TabsContent value="map">
               {view === "map" ? <JourneyMap /> : null}
+              <PlaceOptions />
             </TabsContent>
           </Tabs>
         </div>

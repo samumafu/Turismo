@@ -1,281 +1,177 @@
 "use client";
-
-import Image from "next/image";
-import { Clock3, MapPin, Wallet, Download, Compass } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock3, Download, MapPin, X } from "lucide-react";
 import { usePlanner } from "./provider";
-import { cop, mapsLink } from "@/lib/places";
+import { mapsLink } from "@/lib/places";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { missingFields } from "@/lib/schemas";
-
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+} from "@/components/ui/empty";
+import { PlacePhoto } from "@/components/discovery/place-photo";
 export function ItineraryPanel() {
-  const { state } = usePlanner();
-  const { itinerary, profile } = state;
-  const placeById = new Map(state.places.map((p) => [p.id, p]));
-  const discovered = state.results.length
-    ? state.results
-    : !itinerary
-      ? state.places
-      : [];
-  function download() {
-    if (!itinerary) return;
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          {
-            itinerary,
-            profile,
-            notice:
-              "Agenda y provisiones orientativas. Tarifas y apertura por confirmar.",
-          },
-          null,
-          2,
-        ),
-      ],
-      { type: "application/json" },
+  const { state, actions } = usePlanner();
+  const { itinerary } = state;
+  if (!itinerary)
+    return (
+      <Empty className="itinerary-panel itinerary-pending">
+        <EmptyHeader>
+          <EmptyTitle>Tu itinerario empieza con una elección</EmptyTitle>
+          <EmptyDescription>
+            Añade los lugares que quieras visitar desde las opciones del mapa.
+            Aquí aparecerán únicamente las visitas que aceptes.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
-    const url = URL.createObjectURL(blob);
+  const byId = new Map(state.places.map((p) => [p.id, p]));
+  function download() {
+    const url = URL.createObjectURL(
+      new Blob(
+        [
+          JSON.stringify(
+            {
+              itinerary,
+              places: state.places.filter((p) =>
+                state.selectedIds.includes(p.id),
+              ),
+              notice: "Horas orientativas. Confirma acceso y horarios.",
+            },
+            null,
+            2,
+          ),
+        ],
+        { type: "application/json" },
+      ),
+    );
     const a = document.createElement("a");
     a.href = url;
     a.download = "mi-viaje-narino.json";
     a.click();
     URL.revokeObjectURL(url);
   }
-  if ((!itinerary || state.action === "explore") && discovered.length)
-    return (
-      <div className="itinerary-panel">
-        <div className="itinerary-heading">
-          <div>
-            <Badge variant="secondary">Lugares encontrados</Badge>
-            <h2>Tu selección para explorar</h2>
-            <p>
-              Para organizar horarios y días, cuéntale al chat cómo quieres
-              viajar.
-            </p>
-          </div>
-        </div>
-        <ol className="stop-list">
-          {discovered.map((place, index) => (
-            <li key={place.id} className="stop-row">
-              <div className="stop-clock">
-                <span className="stop-dot">{index + 1}</span>
-              </div>
-              <article className="stop-place">
-                <div className="stop-meta">
-                  {place.category} <span>{place.region}</span>
-                </div>
-                <h3>{place.name}</h3>
-                <p>{place.description}</p>
-                <a
-                  className="maps-link"
-                  href={mapsLink(place)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <MapPin size={14} aria-hidden="true" /> Ver lugar en Google
-                  Maps
-                  <span className="sr-only"> (abre otra pestaña)</span>
-                </a>
-              </article>
-            </li>
-          ))}
-        </ol>
-      </div>
-    );
-  if (!itinerary)
-    return (
-      <div className="itinerary-panel itinerary-pending" aria-live="polite">
-        <Compass size={30} strokeWidth={1.3} aria-hidden="true" />
-        <h2>{state.busy ? "Preparando tu viaje…" : "Tu itinerario"}</h2>
-        <p>
-          {state.error ??
-            (state.action === "clarify" && state.messages.length > 1
-              ? "Completa los datos del viaje en el chat para organizar las visitas por días."
-              : state.discovery?.total === 0
-                ? "No encontramos lugares con esta búsqueda. Cambia la zona o los filtros en el chat."
-                : "Los lugares que encuentres en el chat o en la búsqueda avanzada aparecerán aquí. Al planificar el viaje, verás sus días, actividades y horarios sugeridos.")}
-        </p>
-        {state.action === "clarify" &&
-        state.messages.length > 1 &&
-        !state.busy ? (
-          <ul>
-            {missingFields(profile).map((field) => (
-              <li key={field}>{field}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    );
-  const groupBudget =
-    profile.budgetCOP! *
-    (profile.budgetScope === "persona" ? profile.travelers! : 1);
-  const dayBudget = Math.floor(groupBudget / itinerary.days.length);
   return (
     <div className="itinerary-panel">
       <div className="itinerary-heading">
         <div>
-          <Badge variant="secondary">
-            {state.mode === "demo"
-              ? "Propuesta por reglas · lugares OSM"
-              : "Propuesta con IA"}
-          </Badge>
-          <h2>{itinerary.title}</h2>
+          <Badge variant="secondary">Visitas aceptadas</Badge>
+          <h2>Mi recorrido</h2>
           <p>
-            {profile.days} {profile.days === 1 ? "día" : "días"} para{" "}
-            {profile.travelers}{" "}
-            {profile.travelers === 1 ? "viajero" : "viajeros"} ·{" "}
-            {profile.transport === "a-pie"
-              ? "A pie"
-              : profile.transport === "carro"
-                ? "En carro"
-                : "Transporte público"}
+            {state.selectedIds.length}{" "}
+            {state.selectedIds.length === 1 ? "visita" : "visitas"} · en el
+            orden que elegiste
           </p>
         </div>
         <Button
           variant="outline"
           size="icon"
-          aria-label="Descargar itinerario en JSON"
+          aria-label="Descargar itinerario"
           onClick={download}
         >
           <Download aria-hidden="true" />
         </Button>
       </div>
-      <div className="budget-summary">
-        <Wallet aria-hidden="true" />
-        <div>
-          <span>Tu presupuesto declarado</span>
-          <strong>
-            {cop(profile.budgetCOP!)}{" "}
-            <small>
-              {profile.budgetScope === "persona"
-                ? "por persona"
-                : "para el grupo"}
-            </small>
-          </strong>
-        </div>
-        <p>
-          La viabilidad depende de cotizaciones reales.
-          <br />
-          No es una reserva ni un precio garantizado.
-        </p>
-      </div>
       {itinerary.days.map((day) => (
-        <section
-          className="day-section"
-          key={day.day}
-          aria-labelledby={`day-${day.day}`}
-        >
+        <section className="day-section" key={day.day}>
           <div className="day-heading">
             <span className="day-number">
               {String(day.day).padStart(2, "0")}
             </span>
             <div>
-              <span>Día {day.day}</span>
-              <h3 id={`day-${day.day}`}>{day.title}</h3>
+              <h3>Día {day.day}</h3>
+              <p>Horarios orientativos, sujetos a apertura y traslados.</p>
             </div>
           </div>
           <ol className="stop-list">
-            {day.stops.map((stop, index) => {
-              const place = placeById.get(stop.placeId);
+            {day.stops.map((stop) => {
+              const place = byId.get(stop.placeId);
               if (!place) return null;
+              const index = state.selectedIds.indexOf(place.id);
               return (
-                <li key={`${place.id}-${index}`} className="stop-row">
+                <li key={place.id} className="stop-row">
                   <div className="stop-clock">
                     <time>{stop.suggestedTime}</time>
                     <span className="stop-dot">{index + 1}</span>
                   </div>
                   <article className="stop-place">
-                    <div className="stop-place-main">
-                      <div>
-                        <div className="stop-meta">
-                          {place.category} <span>{place.region}</span>
-                        </div>
-                        <h4>{place.name}</h4>
-                        <p>{stop.activity}</p>
-                        <div className="stop-duration">
-                          <Clock3 size={14} aria-hidden="true" />{" "}
-                          {stop.durationMinutes} min sugeridos{" "}
-                          <span>Entrada: por confirmar</span>
-                        </div>
-                      </div>
-                      {place.image ? (
-                        <Image
-                          src={place.image}
-                          width={104}
-                          height={104}
-                          alt={place.name}
-                          className="stop-photo"
-                        />
-                      ) : null}
+                    <div className="stop-meta">
+                      {place.category} · {place.region}
+                    </div>
+                    <h4>{place.name}</h4>
+                    <div className="stop-duration">
+                      <Clock3 size={14} aria-hidden="true" />
+                      {stop.durationMinutes} min sugeridos
+                    </div>
+                    <PlacePhoto key={place.id} place={place} />
+                    <div className="visit-actions">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={state.busy || index === 0}
+                        aria-label={"Subir " + place.name}
+                        onClick={() => actions.movePlace(place.id, -1)}
+                      >
+                        <ArrowUp aria-hidden="true" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={
+                          state.busy || index === state.selectedIds.length - 1
+                        }
+                        aria-label={"Bajar " + place.name}
+                        onClick={() => actions.movePlace(place.id, 1)}
+                      >
+                        <ArrowDown aria-hidden="true" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={state.busy}
+                        onClick={() => actions.togglePlace(place.id)}
+                      >
+                        <X data-icon="inline-start" aria-hidden="true" />
+                        Quitar visita
+                      </Button>
+                      <a
+                        className="maps-link"
+                        href={mapsLink(place)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MapPin size={14} aria-hidden="true" /> Google Maps y
+                        fotos
+                      </a>
                     </div>
                     <details>
-                      <summary>Antes de ir y fuentes</summary>
+                      <summary>Acceso y fuentes</summary>
                       <p>{place.note}</p>
                       <p>
-                        Horario declarado en OSM:{" "}
-                        {place.openingHours ?? "sin datos; por confirmar"}.
-                        Coordenadas de referencia:{" "}
-                        {place.coordinates.map((c) => c.toFixed(5)).join(", ")}.
+                        Horario declarado:{" "}
+                        {place.openingHours ?? "por confirmar"}. Tarifas: por
+                        confirmar.
                       </p>
-                      {place.sources.map((source) => (
+                      {place.sources.map((s) => (
                         <a
-                          key={source.url}
-                          href={source.url}
+                          href={s.url}
+                          key={s.url}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          {source.label}{" "}
-                          <span className="sr-only"> (abre otra pestaña)</span>
+                          {s.label}
                         </a>
                       ))}
                     </details>
-                    <a
-                      className="maps-link"
-                      href={mapsLink(place)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MapPin size={14} aria-hidden="true" /> Ver lugar en
-                      Google Maps
-                      <span className="sr-only"> (abre otra pestaña)</span>
-                    </a>
                   </article>
                 </li>
               );
             })}
           </ol>
-          <details className="day-budget">
-            <summary>
-              Provisión orientativa del día: {cop(dayBudget)} para el grupo
-            </summary>
-            <p>
-              Reparto aritmético de tu presupuesto, no una estimación de
-              tarifas. Puedes destinar aproximadamente{" "}
-              {cop(Math.floor(dayBudget * 0.35))} a alimentación,{" "}
-              {cop(Math.floor(dayBudget * 0.35))} a traslados y{" "}
-              {cop(dayBudget - 2 * Math.floor(dayBudget * 0.35))} a actividades
-              e imprevistos. Alojamiento no incluido. Las cotizaciones pueden
-              superar estas provisiones.
-            </p>
-          </details>
         </section>
       ))}
-      <Alert>
-        <AlertDescription>
-          Los horarios son una agenda sugerida, no horarios de apertura. Los
-          costos de cada lugar son desconocidos; confirma tarifas,
-          desplazamientos y disponibilidad antes de salir.
-        </AlertDescription>
-      </Alert>
-      <section className="recommendations">
-        <h3>Para llevar en la bitácora</h3>
-        <ul>
-          {itinerary.recommendations.map((note, i) => (
-            <li key={i}>{note}</li>
-          ))}
-        </ul>
-      </section>
+      <p className="map-note">{itinerary.recommendations[0]}</p>
     </div>
   );
 }

@@ -74,6 +74,16 @@ La consulta mínima `node(613326076)` con el transporte del servidor agotó los 
 
 Se acortaron los avisos y el TTL de resultados Photon pasó de 15 minutos a uno. Una prueba con HTTP simulado confirma que la siguiente búsqueda consulta Overpass tras esa pausa y vuelve a conservar sus resultados durante 15 minutos si responde. Se mantienen las pausas ante 429/406. TypeScript, lint de los archivos modificados y 14 resultados específicos de pruebas aprobaron. No se volvió a consumir cuota de Gemini ni se desplegaron estos cambios.
 
+## Visitas aceptadas, fotos y salida acordada · 3 de noviembre de 2026
+
+Chrome local con Gemini real: la petición de café y parque cerca de la Universidad Cooperativa de Colombia obtuvo opciones de ambas categorías. Itinerario permaneció vacío hasta elegir Café Vinotinto y Parque Quintas de San Pedro, y después mostró únicamente esas dos visitas. Se verificaron quitar y reordenar. No se exigió presupuesto. La selección aceptada se incluye en el JSON guardado por la cuenta; no se probó nuevamente Supabase real.
+
+El chat resolvió la universidad como salida y la interfaz pidió confirmarla. FOSSGIS/OSRM devolvió una ruta real de 5,7 km y aproximadamente 9 minutos en carro hasta las dos visitas en orden; el mapa la dibujó. La prueba de servidor simula una función fría y valida que los registros firmados permiten trazar sin volver a Overpass y rechazan datos alterados. No se probó GPS físico en esta etapa.
+
+Wikimedia real devolvió la miniatura de Las Lajas de Diego Delso, CC BY-SA 4.0. Se comprobó el servicio y su licencia, sin atribuir la imagen a otro lugar. Para Café Vinotinto la interfaz indicó ausencia de foto libre verificada y ofreció Google Maps. A 390 px no hubo desbordamiento horizontal. Overpass siguió sin responder y Photon aportó los lugares. Cambios aún sin desplegar en Vercel.
+
+Validación final: 45 resultados de pruebas aprobados, TypeScript, ESLint y build de producción sin errores. Tras recargar, Next.js no reportó errores de compilación ni de ejecución. Se conservó el servidor de desarrollo y se retiró únicamente la salida aislada del build.
+
 ## Referencias
 
 - [Private.coffee: endpoint, términos y uso responsable](https://overpass.private.coffee/).

@@ -76,6 +76,12 @@ export const placeSchema = z.object({
   observedAt: z.string().datetime(),
   cuisine: z.string().max(140).nullable(),
   image: z.string().optional(),
+  wikidata: z
+    .string()
+    .regex(/^Q[1-9]\d*$/)
+    .optional(),
+  commons: z.string().max(250).optional(),
+  verification: z.string().max(100).optional(),
 });
 export type Place = z.infer<typeof placeSchema>;
 export const searchSpecSchema = z.object({

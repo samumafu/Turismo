@@ -46,6 +46,7 @@ export function Account() {
       search: state.search,
       profile: state.profile,
       itinerary: state.itinerary,
+      acceptedIds: state.selectedIds,
       mode: state.mode,
     }),
     [
@@ -55,6 +56,7 @@ export function Account() {
       state.search,
       state.profile,
       state.itinerary,
+      state.selectedIds,
       state.mode,
     ],
   );

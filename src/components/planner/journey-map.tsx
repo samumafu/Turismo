@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Circle, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import { divIcon, latLngBounds } from "leaflet";
 import { z } from "zod";
@@ -37,10 +37,12 @@ function RouteOverlay({
   position,
   stops,
   route,
+  originLabel,
 }: {
   position: UserPosition | null;
   stops: Place[];
   route?: RoadRoute;
+  originLabel: string;
 }) {
   const map = useMap();
   const points = useMemo(
@@ -77,8 +79,8 @@ function RouteOverlay({
           />
           <Marker
             position={position.coordinates}
-            title="Tu ubicación aproximada"
-            alt="Tu ubicación aproximada"
+            title={originLabel}
+            alt={originLabel}
             icon={divIcon({
               className: "user-location-marker",
               html: "<span></span>",
@@ -87,9 +89,13 @@ function RouteOverlay({
             })}
           >
             <Popup>
-              <strong>Tu ubicación aproximada</strong>
+              <strong>{originLabel}</strong>
               <p>
-                Precisión del dispositivo: ±{Math.round(position.accuracy)} m.
+                {position.accuracy
+                  ? "Precisión del dispositivo: ±" +
+                    Math.round(position.accuracy) +
+                    " m."
+                  : "Punto de partida confirmado por ti."}
               </p>
             </Popup>
           </Marker>
@@ -108,11 +114,13 @@ function RouteOverlay({
 function RoutingMap({
   places,
   planned,
+  stops,
 }: {
   places: Place[];
   planned: boolean;
+  stops: Place[];
 }) {
-  const { state, location } = usePlanner();
+  const { state, location, actions } = usePlanner();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(
     state.profile.transport === "a-pie"
@@ -128,13 +136,17 @@ function RoutingMap({
     error?: string;
     busy?: boolean;
   } | null>(null);
-  const destination = places.find((p) => p.id === selectedId);
+  const destination = stops.find((p) => p.id === selectedId);
   const targets = useMemo(
-    () => (destination ? [destination] : planned ? places : places.slice(0, 1)),
-    [places, planned, destination],
+    () => (destination ? [destination] : stops),
+    [stops, destination],
   );
-  const position = location.position;
-  const requestPosition = location.request;
+  const position = state.origin?.confirmed
+    ? { coordinates: state.origin.coordinates, accuracy: 0 }
+    : location.position;
+  const originLabel = state.origin?.confirmed
+    ? state.origin.name
+    : "Tu ubicación GPS";
   const blocked = targets.some(
     (p) =>
       p.availability === "restringido" || (mode === "driving" && !p.roadAccess),
@@ -144,6 +156,7 @@ function RoutingMap({
       ? JSON.stringify({
           origin: position.coordinates,
           placeIds: targets.map((p) => p.id),
+          knownPlaces: targets,
           mode,
         })
       : null;
@@ -188,13 +201,6 @@ function RoutingMap({
       controller.abort();
     };
   }, [query, attempt]);
-  const selectDestination = useCallback(
-    (id: string) => {
-      setSelectedId(id);
-      if (!position) requestPosition();
-    },
-    [position, requestPosition],
-  );
   const center =
     position?.coordinates ??
     ([...(state.search.center ?? searchZones[state.search.zone].center)] as [
@@ -204,7 +210,13 @@ function RoutingMap({
   return (
     <>
       <div className="map-location-actions">
-        <Button onClick={location.request} disabled={location.busy}>
+        <Button
+          onClick={() => {
+            actions.clearOrigin();
+            location.request();
+          }}
+          disabled={location.busy}
+        >
           {location.busy ? (
             <LoaderCircle data-icon="inline-start" aria-hidden="true" />
           ) : (
@@ -212,23 +224,52 @@ function RoutingMap({
           )}
           {location.busy
             ? "Obteniendo ubicación…"
-            : position
-              ? "Actualizar mi ubicación"
+            : location.position
+              ? "Actualizar mi ubicación GPS"
               : "Usar mi ubicación y trazar ruta"}
         </Button>
-        {position ? (
+        {location.position ? (
           <Button
             variant="ghost"
             size="icon"
             aria-label="Dejar de usar ubicación"
             title="Dejar de usar ubicación"
-            onClick={location.clear}
+            onClick={() => {
+              location.clear();
+              actions.clearOrigin();
+            }}
           >
             <X aria-hidden="true" />
           </Button>
         ) : null}
       </div>
-      {location.error ? (
+      {state.origin ? (
+        <Alert>
+          <AlertDescription>
+            <p>Salida: {state.origin.name}</p>
+            <p>
+              {state.origin.coordinates.map((n) => n.toFixed(5)).join(", ")}
+            </p>
+            {!state.origin.confirmed ? (
+              <Button size="sm" onClick={actions.confirmOrigin}>
+                Usar como punto de partida
+              </Button>
+            ) : (
+              <p>Punto de partida confirmado</p>
+            )}{" "}
+            <Button variant="ghost" size="sm" onClick={actions.clearOrigin}>
+              Descartar dirección
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {!position && stops.length ? (
+        <p className="map-note">
+          Activa tu ubicación o indica en el chat desde dónde saldrás, por
+          ejemplo «salgo desde la Universidad Cooperativa de Colombia en Pasto».
+        </p>
+      ) : null}
+      {location.error && !state.origin?.confirmed ? (
         <Alert variant="destructive">
           <AlertDescription>{location.error}</AlertDescription>
         </Alert>
@@ -237,16 +278,18 @@ function RoutingMap({
         places={places}
         center={center}
         radius={state.search.radius}
-        onSelect={selectDestination}
-        selectionLabel="Trazar ruta desde mi ubicación"
+        onSelect={actions.togglePlace}
+        selectedIds={state.selectedIds}
+        selectionLabel="Añadir a mi itinerario"
       >
         <RouteOverlay
           position={position}
           stops={position ? targets : places}
           route={current?.data}
+          originLabel={originLabel}
         />
       </PlaceMap>
-      {places.length ? (
+      {stops.length ? (
         <FieldGroup className="map-route-fields">
           <Field>
             <FieldLabel htmlFor="route-destination">
@@ -265,7 +308,7 @@ function RoutingMap({
               {planned ? (
                 <option value="day">Recorrido del día, en orden</option>
               ) : null}
-              {places.map((p, i) => (
+              {stops.map((p, i) => (
                 <option key={p.id} value={p.id}>
                   {i + 1}. {p.name}
                 </option>
@@ -313,7 +356,7 @@ function RoutingMap({
       </div>
       {current?.busy || (query && !current) ? (
         <p className="map-note" aria-live="polite">
-          Calculando ruta desde tu ubicación…
+          Calculando tu ruta…
         </p>
       ) : current?.data ? (
         <p className="map-note" aria-live="polite">
@@ -362,15 +405,25 @@ function RoutingMap({
 export default function JourneyMap() {
   const { state } = usePlanner();
   const [day, setDay] = useState(0);
-  const itinerary = state.action === "explore" ? null : state.itinerary;
+  const itinerary = state.itinerary;
   const selectedDay = Math.min(day, (itinerary?.days.length ?? 1) - 1);
-  const places = useMemo(() => {
-    if (!itinerary) return state.results;
+  const stops = useMemo(() => {
+    if (!itinerary) return [];
     const byId = new Map(state.places.map((p) => [p.id, p]));
     return itinerary.days[selectedDay].stops
       .map((s) => byId.get(s.placeId))
       .filter((p): p is Place => !!p);
-  }, [itinerary, selectedDay, state.places, state.results]);
+  }, [itinerary, selectedDay, state.places]);
+  const places =
+    state.action === "explore"
+      ? [
+          ...new Map(
+            [...stops, ...state.results].map((p) => [p.id, p]),
+          ).values(),
+        ]
+      : stops.length
+        ? stops
+        : state.results;
   return (
     <div className="map-panel">
       <div className="map-heading">
@@ -399,6 +452,7 @@ export default function JourneyMap() {
         key={`${selectedDay}:${state.profile.transport}:${itinerary ? "plan" : "explore"}`}
         places={places}
         planned={!!itinerary}
+        stops={stops}
       />
     </div>
   );

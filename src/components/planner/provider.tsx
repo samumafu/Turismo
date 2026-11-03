@@ -19,7 +19,7 @@ import {
   type Itinerary,
   type Profile,
 } from "@/lib/schemas";
-import { validatePlan } from "@/lib/planning";
+import { acceptedJourney } from "@/lib/accepted-journey";
 import { useUserLocation } from "./use-user-location";
 import {
   osmIdSchema,
@@ -43,6 +43,7 @@ export const journeySnapshotSchema = z.object({
   profile: profileSchema,
   itinerary: itinerarySchema.nullable(),
   mode: z.enum(["gemini", "demo"]).nullable(),
+  acceptedIds: z.array(osmIdSchema).max(25).default([]),
 });
 export type JourneySnapshot = z.infer<typeof journeySnapshotSchema>;
 type State = {
@@ -52,6 +53,7 @@ type State = {
   places: Place[];
   search: SearchSpec;
   selectedIds: string[];
+  origin: ChatResponse["origin"] | null;
   messages: ChatMessage[];
   profile: Profile;
   itinerary: Itinerary | null;
@@ -65,6 +67,10 @@ type PlannerContextValue = {
   state: State;
   actions: {
     send: (text: string, demo?: boolean) => Promise<boolean>;
+    togglePlace: (id: string) => void;
+    movePlace: (id: string, direction: number) => void;
+    confirmOrigin: () => void;
+    clearOrigin: () => void;
     reset: () => void;
     restore: () => void;
     loadJourney: (snapshot: JourneySnapshot) => boolean;
@@ -81,6 +87,7 @@ const initial: State = {
   places: [],
   search: searchSpecSchema.parse({}),
   selectedIds: [],
+  origin: null,
   messages: [greeting],
   profile: emptyProfile,
   itinerary: null,
@@ -97,10 +104,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const undo = useRef<State | null>(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const picked = z
-      .array(osmIdSchema)
-      .max(25)
-      .safeParse((params.get("lugares") ?? "").split(",").filter(Boolean));
     let linkedSearch: SearchSpec | undefined;
     try {
       const parsed = searchSpecSchema.safeParse(
@@ -121,14 +124,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       setState((s) => ({
         ...s,
         ...(linkedSearch ? { search: linkedSearch } : {}),
-        ...(picked.success && picked.data.length
-          ? {
-              selectedIds: picked.data,
-              search: linkedSearch ?? s.search,
-              itinerary: null,
-              places: [],
-            }
-          : {}),
       })),
     );
   }, []);
@@ -157,6 +152,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           demo,
           search: state.search,
           selectedIds: state.selectedIds,
+          knownPlaces: state.places,
         }),
         signal: AbortSignal.timeout(80000),
       });
@@ -166,47 +162,40 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           `${body.error ?? "No se pudo crear el plan."}${response.status === 429 ? ` Reintenta en ${response.headers.get("Retry-After") ?? 60} segundos.` : ""}`,
         );
       const result = chatResponseSchema.parse(body);
-      setState((s) => ({
-        ...s,
-        action: result.action,
-        results:
-          result.discovery || result.places.length ? result.places : s.results,
-        discovery: result.discovery ?? s.discovery,
-        places: [
+      setState((s) => {
+        const selectedIds = result.selectedIds ?? s.selectedIds;
+        const places = [
           ...new Map(
-            [
-              ...result.places,
-              ...s.places.filter(
-                (p) => !result.places.some((v) => v.id === p.id),
-              ),
-            ].map((p) => [p.id, p]),
+            [...result.places, ...s.places].map((p) => [p.id, p]),
           ).values(),
         ]
           .filter(
             (p) =>
               result.places.some((v) => v.id === p.id) ||
-              s.itinerary?.days.some((d) =>
-                d.stops.some((stop) => stop.placeId === p.id),
-              ),
+              selectedIds.includes(p.id) ||
+              s.results.some((v) => v.id === p.id),
           )
-          .slice(0, 75),
-        search: result.search ?? s.search,
-        profile: result.profile,
-        itinerary:
-          result.itinerary ??
-          ((result.action === "clarify" || result.action === "plan") &&
-          s.itinerary &&
-          !validatePlan(s.itinerary, result.profile, s.places)
-            ? null
-            : s.itinerary),
-        messages: [
-          ...messages,
-          { role: "assistant", content: result.message },
-        ].slice(-16) as ChatMessage[],
-        mode: result.mode,
-        notice: result.notice,
-        busy: false,
-      }));
+          .slice(0, 75);
+        return {
+          ...s,
+          action: result.action,
+          results: result.discovery ? result.places : s.results,
+          discovery: result.discovery ?? s.discovery,
+          places,
+          selectedIds,
+          search: result.search ?? s.search,
+          profile: result.profile,
+          itinerary: acceptedJourney(selectedIds, places, result.itinerary),
+          origin: result.origin ?? s.origin,
+          messages: [
+            ...messages,
+            { role: "assistant", content: result.message },
+          ].slice(-16) as ChatMessage[],
+          mode: result.mode,
+          notice: result.notice,
+          busy: false,
+        };
+      });
       return true;
     } catch (error) {
       setState((s) => ({
@@ -237,19 +226,28 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }
   function loadJourney(snapshot: JourneySnapshot) {
     if (lock.current) return false;
-    if (
-      snapshot.itinerary &&
-      !validatePlan(snapshot.itinerary, snapshot.profile, snapshot.places)
-    )
-      return false;
+    const acceptedIds = snapshot.acceptedIds.filter((id) =>
+      snapshot.places.some(
+        (p) => p.id === id && p.availability !== "restringido",
+      ),
+    );
     setState((s) => ({
       ...s,
       ...snapshot,
       action: snapshot.action ?? (snapshot.itinerary ? "plan" : "explore"),
-      selectedIds: [],
+      selectedIds: acceptedIds,
+      itinerary: acceptedJourney(
+        acceptedIds,
+        snapshot.places,
+        snapshot.itinerary,
+      ),
+      origin: null,
       discovery: undefined,
       messages: [greeting],
-      notice: null,
+      notice:
+        snapshot.itinerary && !acceptedIds.length
+          ? "El viaje anterior contiene propuestas sin confirmar. Elige las visitas que quieras conservar."
+          : null,
       error: null,
     }));
     return true;
@@ -268,13 +266,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         .filter(
           (p) =>
             result.places.some((v) => v.id === p.id) ||
-            s.itinerary?.days.some((d) =>
-              d.stops.some((stop) => stop.placeId === p.id),
-            ),
+            s.selectedIds.includes(p.id),
         )
         .slice(0, 75),
       search: result.spec,
-      selectedIds: [],
       notice: result.notice,
       error: null,
       discovery: {
@@ -286,20 +281,79 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }
   function selectPlaces(ids: string[], search: SearchSpec) {
     if (lock.current) return;
+    setState((s) => {
+      const selectedIds = [...new Set([...s.selectedIds, ...ids])]
+        .filter((id) =>
+          s.places.some((p) => p.id === id && p.availability !== "restringido"),
+        )
+        .slice(0, 25);
+      return {
+        ...s,
+        action: "plan",
+        selectedIds,
+        search,
+        itinerary: acceptedJourney(selectedIds, s.places),
+      };
+    });
+  }
+  function togglePlace(id: string) {
+    if (lock.current) return;
+    setState((s) => {
+      if (
+        !s.places.some((p) => p.id === id && p.availability !== "restringido")
+      )
+        return s;
+      const selectedIds = s.selectedIds.includes(id)
+        ? s.selectedIds.filter((v) => v !== id)
+        : [...s.selectedIds, id].slice(0, 25);
+      return {
+        ...s,
+        selectedIds,
+        itinerary: acceptedJourney(selectedIds, s.places),
+      };
+    });
+  }
+  function movePlace(id: string, direction: number) {
+    if (lock.current) return;
+    setState((s) => {
+      const ids = [...s.selectedIds];
+      const from = ids.indexOf(id);
+      const to = from + direction;
+      if (from < 0 || to < 0 || to >= ids.length) return s;
+      [ids[from], ids[to]] = [ids[to], ids[from]];
+      return {
+        ...s,
+        selectedIds: ids,
+        itinerary: acceptedJourney(ids, s.places),
+      };
+    });
+  }
+  function confirmOrigin() {
     setState((s) => ({
       ...s,
-      action: "explore",
-      selectedIds: ids,
-      search,
-      results: s.places.filter((p) => ids.includes(p.id)),
+      origin: s.origin ? { ...s.origin, confirmed: true } : null,
     }));
+  }
+  function clearOrigin() {
+    setState((s) => ({ ...s, origin: null }));
   }
   return (
     <PlannerContext
       value={{
         location,
         state,
-        actions: { send, reset, restore, loadJourney, discover, selectPlaces },
+        actions: {
+          send,
+          reset,
+          restore,
+          loadJourney,
+          discover,
+          selectPlaces,
+          togglePlace,
+          movePlace,
+          confirmOrigin,
+          clearOrigin,
+        },
         meta: { maxMessageLength: 2500 },
       }}
     >

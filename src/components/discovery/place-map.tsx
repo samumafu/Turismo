@@ -60,10 +60,12 @@ function Clusters({
   places,
   onSelect,
   selectionLabel,
+  selectedIds,
 }: {
   places: Place[];
   onSelect?: (id: string) => void;
   selectionLabel: string;
+  selectedIds: string[];
 }) {
   const map = useMap();
   useEffect(() => {
@@ -86,7 +88,9 @@ function Clusters({
           title: place.name,
           alt: place.name,
           icon: L.divIcon({
-            className: "numbered-marker",
+            className: selectedIds.includes(place.id)
+              ? "numbered-marker accepted-marker"
+              : "numbered-marker",
             html: `<span><b>${index + 1}</b></span>`,
             iconSize: [32, 38],
             iconAnchor: [16, 38],
@@ -109,7 +113,9 @@ function Clusters({
           const button = document.createElement("button");
           button.type = "button";
           button.className = "map-pick-button";
-          button.textContent = selectionLabel;
+          button.textContent = selectedIds.includes(place.id)
+            ? "Quitar de mi itinerario"
+            : selectionLabel;
           button.addEventListener("click", () => onSelect(place.id));
           content.append(button);
         }
@@ -122,7 +128,7 @@ function Clusters({
       map.removeLayer(group);
       group.clearLayers();
     };
-  }, [map, places, onSelect, selectionLabel]);
+  }, [map, places, onSelect, selectionLabel, selectedIds]);
   return null;
 }
 export default function PlaceMap({
@@ -133,6 +139,7 @@ export default function PlaceMap({
   onSelect,
   selectionLabel = "Seleccionar para mi viaje",
   children,
+  selectedIds = [],
 }: {
   places: Place[];
   center: [number, number];
@@ -141,6 +148,7 @@ export default function PlaceMap({
   onSelect?: (id: string) => void;
   selectionLabel?: string;
   children?: ReactNode;
+  selectedIds?: string[];
 }) {
   return (
     <div
@@ -169,6 +177,7 @@ export default function PlaceMap({
           places={places}
           onSelect={onSelect}
           selectionLabel={selectionLabel}
+          selectedIds={selectedIds}
         />
         {children}
       </MapContainer>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolvePlaces } from "@/lib/server/discovery";
-import { osmIdSchema } from "@/lib/places";
+import { osmIdSchema, placeSchema } from "@/lib/places";
 import {
   guardRequest,
   readJson,
@@ -14,6 +14,7 @@ export const maxDuration = 50;
 const schema = z
   .object({
     placeIds: z.array(osmIdSchema).min(1).max(5),
+    knownPlaces: z.array(placeSchema).max(5).optional(),
     origin: z
       .tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])
       .optional(),
@@ -44,14 +45,17 @@ const cache = new Map<string, { expires: number; data: unknown }>();
 export async function POST(request: Request) {
   try {
     guardRequest(request, "route");
-    const parsed = schema.safeParse(await readJson(request, 2000));
+    const parsed = schema.safeParse(await readJson(request, 24000));
     if (!parsed.success)
       throw new HttpError(
         400,
         "Envía una ubicación válida y de 1 a 5 destinos OSM; sin ubicación se necesitan al menos 2 destinos.",
       );
     const { origin, mode } = parsed.data;
-    const stops = await resolvePlaces(parsed.data.placeIds);
+    const stops = await resolvePlaces(
+      parsed.data.placeIds,
+      parsed.data.knownPlaces,
+    );
     if (
       stops.some(
         (place) =>

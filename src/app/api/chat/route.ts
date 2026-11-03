@@ -1,10 +1,6 @@
-import {
-  chatRequestSchema,
-  missingFields,
-  type ChatResponse,
-} from "@/lib/schemas";
-import { dynamicReply, validatePlan } from "@/lib/planning";
-import { deduplicatePlaces } from "@/lib/osm";
+import { chatRequestSchema, type ChatResponse } from "@/lib/schemas";
+import { dynamicReply } from "@/lib/planning";
+import { acceptedJourney } from "@/lib/accepted-journey";
 import {
   interpretSearch,
   searchSpecSchema,
@@ -12,20 +8,17 @@ import {
   haversine,
   searchZones,
   categoryLabels,
-  type SearchSpec,
 } from "@/lib/places";
 import { discoverPlaces, resolvePlaces } from "@/lib/server/discovery";
+import { isVerifiedPlace } from "@/lib/server/place-verification";
+import { resolveSearchReference } from "@/lib/server/search-reference";
 import {
   errorResponse,
   guardRequest,
   HttpError,
   readJson,
 } from "@/lib/server/guard";
-import {
-  geminiReply,
-  interpretDiscovery,
-  geminiFailureNotice,
-} from "@/lib/server/gemini";
+import { interpretDiscovery, geminiFailureNotice } from "@/lib/server/gemini";
 
 export const maxDuration = 75;
 const json = (body: ChatResponse) =>
@@ -33,36 +26,49 @@ const json = (body: ChatResponse) =>
 export async function POST(request: Request) {
   try {
     guardRequest(request, "chat");
-    const parsed = chatRequestSchema.safeParse(await readJson(request));
+    const parsed = chatRequestSchema.safeParse(await readJson(request, 150000));
     if (!parsed.success)
       throw new HttpError(
         400,
         "Revisa los datos de la conversación y del viaje.",
       );
     const input = parsed.data;
-    const previousProfile = input.profile;
-    const previousSearch = input.search ?? searchSpecSchema.parse({});
-    const text = normalize(input.messages.at(-1)!.content);
+    const last = input.messages.at(-1)!.content;
+    const text = normalize(last);
     let search = interpretSearch(
-      input.messages.at(-1)!.content,
-      previousSearch,
+      last,
+      input.search ?? searchSpecSchema.parse({}),
     );
     const draft = dynamicReply(input, []);
+    input.profile = draft.profile;
     let action: ChatResponse["action"] =
-      /itinerario|plan|agenda|recorrido|presupuesto|\bdias?\b|reemplaza|sustituye|anade|agrega/.test(
+      /cafe|restaurante|museo|natural|cocha|cascada|mirador|hotel|parque|iglesia|lugar|busca|encuentra/.test(
         text,
       )
-        ? "plan"
-        : /restaurante|museo|natural|cocha|cascada|mirador|cafeteria|hotel|parque|iglesia|lugar|busca|encuentra/.test(
+        ? "explore"
+        : /itinerario|plan|agenda|recorrido|presupuesto|elige|elijo|acepto|quita|agrega|anade|prefiero/.test(
               text,
             )
-          ? "explore"
+          ? "plan"
           : "clarify";
     let message = draft.message;
-    input.profile = draft.profile;
     const key = input.demo ? undefined : process.env.GEMINI_API_KEY?.trim();
-    let canUseGemini = !!key;
+    let mode: ChatResponse["mode"] = key ? "gemini" : "demo";
     let notice: string | null = key ? null : "Modo sin IA.";
+    const known = (input.knownPlaces ?? []).filter(isVerifiedPlace);
+    input.knownPlaces = known;
+    let add: string[] = [];
+    let remove: string[] = [];
+    let originQuery: string | undefined;
+    let proposedItinerary = input.itinerary;
+    const originIntent =
+      /salgo|salimos|saldre|parto|partimos|punto de partida|comenzamos desde|inicio desde|mi direccion|salida es|saldremos|como salida/.test(
+        text,
+      );
+    const selectionIntent =
+      /elijo|elige|acepto|escojo|me quedo|prefiero|quiero visitar|agrega|anade|incluye|quita|retira|elimina/.test(
+        text,
+      );
     if (key) {
       try {
         const intent = await interpretDiscovery(input, key, search);
@@ -70,141 +76,171 @@ export async function POST(request: Request) {
         input.profile = intent.profile;
         action = intent.action;
         message = intent.message;
+        proposedItinerary = intent.itinerary ?? input.itinerary;
+        if (selectionIntent) {
+          add = intent.selection?.add ?? [];
+          remove = intent.selection?.remove ?? [];
+        }
+        if (originIntent) originQuery = intent.originQuery || undefined;
       } catch (error) {
-        canUseGemini = false;
+        mode = "demo";
         notice = geminiFailureNotice(error);
       }
     }
+    if (selectionIntent && !add.length && !remove.length) {
+      const matches = known
+        .filter((p) => text.includes(normalize(p.name)))
+        .sort(
+          (a, b) =>
+            text.indexOf(normalize(a.name)) - text.indexOf(normalize(b.name)),
+        );
+      if (/quita|retira|elimina/.test(text)) remove = matches.map((p) => p.id);
+      else add = matches.map((p) => p.id);
+    }
+    // A generic wish to visit a cafe is not acceptance of a specific model-chosen cafe.
+    const named = new Set(
+      known.filter((p) => text.includes(normalize(p.name))).map((p) => p.id),
+    );
+    const ordinal = text.match(
+      /\b(?:el|la) (primero|primera|segundo|segunda|tercero|tercera)\b/,
+    );
+    if (ordinal) {
+      const index = /primer/.test(ordinal[1])
+        ? 0
+        : /segund/.test(ordinal[1])
+          ? 1
+          : 2;
+      if (known[index]) named.add(known[index].id);
+    }
+    add = add.filter((id) => named.has(id));
+    remove = remove.filter((id) => named.has(id));
+    const knownIds = new Set(known.map((p) => p.id));
+    const selectedIds = [
+      ...new Set([
+        ...input.selectedIds.filter((id) => !remove.includes(id)),
+        ...add.filter((id) => knownIds.has(id)),
+      ]),
+    ].slice(0, 25);
+    const selected = selectedIds.length
+      ? await resolvePlaces(selectedIds, known)
+      : [];
+    const itinerary = acceptedJourney(selectedIds, selected, proposedItinerary);
+    let origin: ChatResponse["origin"];
+    if (originIntent) {
+      originQuery ||= last
+        .match(
+          /(?:desde|(?:salgo|salimos|parto|partimos) de|mi direcci[oó]n es|punto de partida (?:es|sera))\s+(.+?)(?:,|\s+y\s+(?:quiero|busca|luego)|$)/i,
+        )?.[1]
+        ?.trim()
+        .slice(0, 160);
+      if (originQuery) {
+        const resolved = await resolveSearchReference({
+          ...search,
+          near: originQuery,
+        });
+        origin = {
+          query: originQuery,
+          name: resolved.reference!.name,
+          coordinates: resolved.center!,
+          confirmed: false,
+        };
+        search = {
+          ...search,
+          center: resolved.center,
+          near: undefined,
+          reference: undefined,
+          name: "",
+        };
+      }
+    }
+    if (add.length || remove.length || (action === "plan" && selected.length)) {
+      return json({
+        message: origin
+          ? "Encontré tu punto de partida. Confírmalo en el mapa para usarlo en la ruta."
+          : itinerary
+            ? "Tu itinerario contiene únicamente las visitas que aceptaste. Puedes quitar o reordenar sus paradas."
+            : "Tu itinerario está vacío. Elige los lugares que quieras visitar entre las opciones del mapa.",
+        profile: input.profile,
+        itinerary,
+        action: origin ? "clarify" : "plan",
+        mode,
+        notice,
+        places: selected,
+        search,
+        selectedIds,
+        origin,
+      });
+    }
+    if (action === "plan") action = "explore";
+    if (
+      action === "clarify" &&
+      /cafe|parque|restaurante|museo|busca|encuentra/.test(text) &&
+      !selectionIntent
+    )
+      action = "explore";
     if (
       action === "clarify" ||
-      (action === "plan" && missingFields(input.profile).length)
+      (origin &&
+        !/busca|encuentra|recomienda|quiero (?:ir|visitar|un|una)|me gustaria/.test(
+          text,
+        ))
     ) {
-      const missing = missingFields(input.profile);
       return json({
-        message:
-          canUseGemini && action === "clarify"
+        message: origin
+          ? "Encontré tu punto de partida. Confírmalo en el mapa para usarlo en la ruta."
+          : mode === "gemini"
             ? message
-            : missing.length
-              ? `Para organizar tu itinerario, cuéntame ${missing.join("; ")}. También puedes pedirme buscar lugares sin completar un plan.`
-              : "¿Qué te gustaría buscar o cambiar de tu viaje?",
+            : "¿Qué te gustaría buscar? Puedes elegir los lugares antes de organizar tu recorrido.",
         profile: input.profile,
-        itinerary: null,
+        itinerary,
         action: "clarify",
-        mode: canUseGemini ? "gemini" : "demo",
+        mode,
         notice,
-        places: [],
+        places: selected,
         search,
+        selectedIds,
+        origin,
       });
     }
     const found = await discoverPlaces(search);
     search = found.spec;
-    if (action === "explore") {
-      const context = `${search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ")}${search.reference ? ` cerca de ${search.reference.name}` : ` en ${searchZones[search.zone].label}${search.center ? " (zona del mapa)" : ""}`}`;
-      const suggestions = found.places
-        .slice(0, 3)
-        .map((p) => {
-          const meters = search.center
-            ? haversine(search.center, p.coordinates)
-            : null;
-          return `${p.name}${meters !== null ? ` (aprox. ${Math.round(meters / 10) * 10} m en línea recta)` : ""}`;
-        })
-        .join("; ");
-      return json({
-        message: found.total
-          ? `Encontré ${found.total}${found.truncated ? "+" : ""} coincidencias de ${context}. ${suggestions}. Puedes verlas en el mapa y en Itinerario. Confirma horarios y acceso antes de ir.`
-          : `No encontré coincidencias de ${context} con estos filtros. Podemos ampliar el radio o buscar otra categoría. OSM puede no tener todos los lugares registrados.`,
-        profile: input.profile,
-        itinerary: null,
-        action,
-        mode: canUseGemini ? "gemini" : "demo",
-        notice:
-          [notice, found.notice].filter(Boolean).join(" ").slice(0, 400) ||
-          null,
-        places: found.places,
-        search: found.spec,
-        discovery: {
-          total: found.total,
-          source: found.source,
-          observedAt: found.observedAt,
-        },
-      });
-    }
-    const signature = (s: SearchSpec) =>
-      JSON.stringify([
-        s.zone,
-        s.center ?? null,
-        s.radius,
-        [...s.categories].sort(),
-        s.name,
-        s.near ?? null,
-        s.regionalFood,
-      ]);
-    const retainPrevious =
-      signature(search) === signature(previousSearch) ||
-      /reemplaza|sustituye|anade|agrega|incluye/.test(text);
-    if (!retainPrevious) input.itinerary = null;
-    const previousIds =
-      input.itinerary?.days.flatMap((d) => d.stops.map((s) => s.placeId)) ?? [];
-    const selected = await resolvePlaces([
-      ...new Set([...previousIds, ...input.selectedIds]),
-    ]);
-    if (
-      input.itinerary &&
-      !validatePlan(input.itinerary, previousProfile, selected)
-    )
-      throw new HttpError(
-        409,
-        "No se pudieron validar los destinos anteriores. Inicia una nueva búsqueda.",
-      );
-    const center = search.center ?? searchZones[search.zone].center;
-    const relevant = retainPrevious
-      ? selected
-      : selected.filter(
-          (p) => haversine([...center], p.coordinates) <= search.radius,
-        );
-    const candidates = deduplicatePlaces([...relevant, ...found.places])
-      .filter((p) => p.availability !== "restringido")
-      .slice(0, 50);
-    let reply = dynamicReply(input, candidates);
-    let mode: ChatResponse["mode"] = "demo";
-    if (key && canUseGemini) {
-      try {
-        reply = await geminiReply(input, key, candidates);
-        mode = "gemini";
-        if (
-          !reply.itinerary &&
-          !missingFields(reply.profile).length &&
-          candidates.length
-        ) {
-          reply = dynamicReply(
-            { ...input, profile: reply.profile },
-            candidates,
-          );
-          mode = "demo";
-          notice =
-            "La IA no generó la agenda. Se organizó una propuesta por reglas con los mismos lugares consultados.";
-        }
-      } catch (error) {
-        notice = geminiFailureNotice(error);
-      }
-    }
+    const context =
+      search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ") +
+      (search.reference
+        ? " cerca de " + search.reference.name
+        : " en " + searchZones[search.zone].label);
+    const suggestions = found.places
+      .slice(0, 3)
+      .map(
+        (p) =>
+          p.name +
+          (search.center
+            ? " (aprox. " +
+              Math.round(haversine(search.center, p.coordinates) / 10) * 10 +
+              " m en línea recta)"
+            : ""),
+      )
+      .join("; ");
     return json({
-      ...reply,
-      action: "plan",
+      message: found.total
+        ? "Encontré " +
+          found.total +
+          " coincidencias de " +
+          context +
+          ". " +
+          suggestions +
+          ". Elige las que quieras visitar con Añadir a mi itinerario; solo esas formarán tu recorrido."
+        : "No encontré coincidencias con estos filtros. Podemos ampliar el radio o cambiar la zona.",
+      profile: input.profile,
+      itinerary,
+      action: "explore",
       mode,
       notice:
-        [
-          notice,
-          found.notice,
-          !candidates.length
-            ? "No hay lugares aptos con estos filtros. Prueba otra zona, nombre o radio."
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .slice(0, 400) || null,
-      places: candidates,
-      search: found.spec,
+        [notice, found.notice].filter(Boolean).join(" ").slice(0, 400) || null,
+      places: found.places,
+      search,
+      selectedIds,
+      origin,
       discovery: {
         total: found.total,
         source: found.source,

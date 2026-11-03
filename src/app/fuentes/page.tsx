@@ -69,44 +69,46 @@ export default function Sources() {
           <section>
             <h2>Caché temporal, sin catálogo manual</h2>
             <p>
-              El servidor mantiene por 15 minutos las respuestas de búsqueda y
-              durante un máximo de 24 horas los registros ya consultados. Si
-              Overpass falla y existe una respuesta anterior para la misma
-              consulta, se identifica claramente como caché antigua. Sin datos
-              consultados, se informa el error: no se crean lugares de relleno.
+              El servidor mantiene por 15 minutos las respuestas de Overpass,
+              por un minuto las de respaldo de Photon y durante un máximo de 24
+              horas los registros ya consultados. Si Overpass falla y existe una
+              respuesta anterior para la misma consulta, se identifica
+              claramente como caché antigua. Sin datos consultados, se informa
+              el error: no se crean lugares de relleno.
             </p>
             <p>
               La caché vive en memoria, está acotada y puede desaparecer al
-              reiniciar. El plan permanece únicamente en la sesión abierta del
-              navegador. Al modificar o calcular rutas, el servidor resuelve sus
-              IDs en datos OSM consultados, sin aceptar coordenadas de destinos
-              enviadas por el navegador como prueba de ubicación. El origen GPS
-              sí procede del permiso de ubicación del dispositivo.
+              reiniciar. Sin cuenta el plan permanece en la sesión; con cuenta
+              puede guardarse. Los registros consultados llevan una firma del
+              servidor válida durante 24 horas para calcular rutas sin repetir
+              la búsqueda. Las coordenadas alteradas se rechazan. El origen GPS
+              procede del permiso del dispositivo; una referencia de salida
+              escrita en el chat se consulta y pide confirmación.
             </p>
           </section>
           <section>
             <h2>La IA y los límites de la propuesta</h2>
             <p>
-              Con una clave configurada, Gemini interpreta zona y categorías y
-              después recibe hasta 50 candidatos relevantes obtenidos de OSM.
-              Solo puede seleccionar sus identificadores; la interfaz representa
-              las coordenadas y nombres originales. Las etiquetas de OSM y la
-              conversación se tratan como datos, nunca como instrucciones del
-              sistema.
+              Con una clave configurada, Gemini interpreta zona, categorías,
+              elecciones y punto de partida. El itinerario contiene únicamente
+              visitas aceptadas por el viajero; buscar opciones no las añade. La
+              interfaz conserva las coordenadas y nombres de OSM. Las etiquetas
+              de OSM y la conversación se tratan como datos, nunca como
+              instrucciones del sistema.
             </p>
             <p>
               Sin clave o si Gemini falla se usa búsqueda OSM y planificación
-              por reglas, señalada como “sin IA”. Si faltan datos del viaje, se
-              pregunta antes de construir el itinerario. Las recomendaciones de
-              IA y por reglas son orientativas, no reservas ni cotizaciones.
+              por reglas, señalada como “sin IA”. Elegir visitas no requiere
+              completar presupuesto ni acompañantes. Las recomendaciones de IA y
+              por reglas son orientativas, no reservas ni cotizaciones.
             </p>
             <p>
               No inventamos precios, teléfonos o disponibilidad. Un horario de
               OSM se presenta como declaración comunitaria por confirmar; la
               hora propuesta en la agenda no es un horario de apertura. El
-              reparto del presupuesto es una provisión aritmética, no una tarifa
-              de mercado. Confirma rutas y traslados reales; el margen entre
-              visitas no representa un tiempo de viaje medido.
+              presupuesto declarado no garantiza tarifas ni disponibilidad.
+              Confirma rutas y traslados reales; el margen entre visitas no
+              representa un tiempo de viaje medido.
             </p>
             <p>
               No se programan ingresos a sitios marcados privados o
@@ -155,7 +157,7 @@ export default function Sources() {
             </p>
           </section>
           <section id="fotografias">
-            <h2>Fotografía de la interfaz</h2>
+            <h2>Fotografías de los lugares</h2>
             <p>
               <a href="https://commons.wikimedia.org/wiki/File:Santuario_de_Las_Lajas,_Ipiales,_Colombia,_2015-07-21,_DD_01.JPG">
                 Santuario de Las Lajas y sus alrededores
@@ -168,9 +170,13 @@ export default function Sources() {
               licencia.
             </p>
             <p>
-              Esta imagen ilustra la interfaz, no forma una base de lugares. Los
-              resultados OSM no muestran fotografías externas sin una licencia
-              de uso comprobada.
+              Las fotografías se consultan a petición en Wikimedia Commons,
+              usando enlaces de OSM o una coincidencia de nombre y ubicación en
+              Wikidata. Cada imagen muestra autor, licencia y enlace de origen.
+              Solo se aceptan CC BY, CC BY-SA, CC0 y dominio público. Si no hay
+              una foto verificada se ofrece Google Maps como enlace externo. No
+              se copian fotografías de Google ni se usa una foto cercana como si
+              fuera del lugar elegido.
             </p>
           </section>
           <section id="privacidad">

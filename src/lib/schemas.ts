@@ -50,6 +50,15 @@ export const messageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1).max(2500),
 });
+export const agreedOriginSchema = z.object({
+  query: z.string().max(160),
+  name: z.string().max(180),
+  coordinates: z.tuple([
+    z.number().min(-0.1).max(3),
+    z.number().min(-79.5).max(-76.3),
+  ]),
+  confirmed: z.boolean(),
+});
 export const chatRequestSchema = z
   .object({
     messages: z.array(messageSchema).min(1).max(16),
@@ -58,6 +67,7 @@ export const chatRequestSchema = z
     demo: z.boolean().default(false),
     search: searchSpecSchema.optional(),
     selectedIds: z.array(osmIdSchema).max(25).default([]),
+    knownPlaces: z.array(placeSchema).max(75).optional(),
   })
   .refine(
     (v) => v.messages.at(-1)?.role === "user",
@@ -69,6 +79,8 @@ export const chatResponseSchema = modelResponseSchema.extend({
   notice: z.string().max(400).nullable(),
   places: z.array(placeSchema).max(50).default([]),
   search: searchSpecSchema.optional(),
+  selectedIds: z.array(osmIdSchema).max(25).optional(),
+  origin: agreedOriginSchema.optional(),
   discovery: z
     .object({ total: z.number(), source: z.string(), observedAt: z.string() })
     .optional(),

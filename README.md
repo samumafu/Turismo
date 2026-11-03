@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:3000/planificar. Copia solo los comandos, sin `PS ...>`. No hace falta una clave para buscar o planificar por reglas, pero sí conexión a Overpass.
+Abre http://localhost:3000/planificar. Copia solo los comandos, sin `PS ...>`. No hace falta una clave para buscar o planificar por reglas, pero sí conexión a un proveedor de búsqueda OSM.
 
 La única experiencia principal está en `/planificar`; `/` redirige allí y la antigua página `/destinos` fue eliminada. Gemini decide si explorar, pedir información o planificar, y traduce la conversación a filtros permitidos y datos del viaje. Puedes cambiar zona, categoría, radio, presupuesto, días, acompañantes o transporte conversando. Buscar lugares no exige completar un itinerario.
 
@@ -21,7 +21,7 @@ Los filtros manuales y la exploración del mapa se cargan únicamente al abrir *
 
 También puedes buscar sin GPS: «una cafetería cerca de la Universidad Cooperativa de Colombia campus Pasto». El servidor separa la categoría del punto de referencia, resuelve este último en Photon/OSM y busca alrededor de sus coordenadas (1,5 km por defecto, ajustable por chat). Si no lo encuentra o hay varias sedes, solicita precisar el lugar; no lo sustituye por el centro de la ciudad. Las referencias se consultan dinámicamente y se guardan en caché una hora, hasta 50, sin catálogo manual. El chat muestra nombres reales y distancias aproximadas en línea recta, distintas de una ruta transitable.
 
-En la búsqueda avanzada puedes seleccionar hasta 5 lugares como candidatos. Sin cuenta, el plan se mantiene solo en memoria durante la sesión. Con cuenta puedes guardar un viaje en Supabase y recuperarlo después. Al editar o calcular una ruta, el servidor resuelve los identificadores OSM y no confía en coordenadas de destinos enviadas por el navegador.
+En la búsqueda avanzada puedes aceptar hasta 5 lugares por selección (25 visitas en total). Los lugares encontrados se muestran en el mapa; **Itinerario contiene únicamente los aceptados**, conserva su orden y permite quitar o mover visitas. No exige presupuesto para organizar un recorrido sencillo. Las horas y duraciones son orientativas. Las propuestas guardadas por versiones anteriores no se convierten automáticamente en visitas aceptadas. Sin cuenta, el plan se mantiene solo en memoria durante la sesión. Con cuenta puedes guardar un viaje en Supabase y recuperarlo después. Al editar o calcular una ruta, el servidor resuelve los identificadores OSM y no confía en coordenadas de destinos enviadas por el navegador.
 
 ## Cuentas y viaje guardado
 
@@ -54,9 +54,9 @@ Tras iniciar sesión, el viaje guardado se abre si la sesión está vacía. Si h
 
 ### Mapa principal, ubicación y rutas
 
-La vista inicial es **Mapa**; se eliminó la pestaña “Lugares”. En móviles el mapa aparece antes del chat. Los destinos del chat se muestran como marcadores, con detalles y acceso a rutas desde cada marcador.
+La vista inicial es **Mapa**; se eliminó la pestaña “Lugares”. En móviles el mapa aparece antes del chat. Los resultados del chat se muestran como marcadores y opciones para aceptar visitas. Las rutas recorren solo las visitas aceptadas, en orden.
 
-Pulsa **Usar mi ubicación y trazar ruta** y concede permiso. Se muestra tu posición con su precisión aproximada; si ya hay recomendaciones, se calcula un recorrido desde ese origen. En una búsqueda se parte hacia el primer destino y puedes elegir otro en el selector o su marcador. Para un itinerario puedes recorrer las paradas del día en orden o elegir un destino individual. Actualiza tu ubicación si te desplazas: no hay seguimiento GPS continuo.
+Pulsa **Usar mi ubicación y trazar ruta** y concede permiso. Se muestra tu posición con su precisión aproximada; si ya hay recomendaciones, se calcula un recorrido desde ese origen. También puedes acordar en el chat una dirección o referencia como salida. Photon la resuelve y la interfaz pide confirmar el punto antes de usarlo. Si es ambiguo, se pide precisar. No se toma automáticamente «cerca de» como origen de ruta. Para un itinerario puedes recorrer las paradas del día en orden o elegir un destino individual. Actualiza tu ubicación si te desplazas: no hay seguimiento GPS continuo.
 
 Las rutas en carro y a pie usan perfiles reales distintos de [FOSSGIS / OSRM](https://routing.openstreetmap.de/about.html), sin cuenta ni clave. Se respeta un máximo de una solicitud por segundo por instancia, sin reintentos automáticos, con cancelación y espera ante cambios rápidos. No se generan líneas rectas para sustituir rutas. Si falla el proveedor, se muestra el error y un enlace a Google Maps **con el origen GPS**. El transporte público usa ese enlace externo; no se simula su ruta como si fuera de carro.
 
@@ -78,9 +78,9 @@ APP_PUBLIC_URL=https://tu-proyecto.vercel.app
 
 El servidor envía un User-Agent identificable. Una consulta está limitada a 12 s de ejecución en Overpass, 15 s de red, 16 MiB de memoria remota declarada y 3 MB de respuesta descargada. Se espacia el inicio de solicitudes al menos 1,6 s y se limita a 15/minuto. Ante 401/403/406/429 se pausa y no se consulta ningún respaldo para evadir restricciones. Una caída de red o un 5xx abre un circuito de un minuto; se puede configurar una segunda instancia mediante `OVERPASS_FALLBACK_URL`, sin repetir solicitudes al mismo servidor. Solicitudes simultáneas idénticas comparten la consulta.
 
-Si Overpass está caído, las búsquedas interactivas usan [Photon de Komoot](https://photon.komoot.io/), otro índice de datos OSM sin clave ni cuenta. Se limita a 10 solicitudes/minuto, una por 1,5 s, 8 s de espera y 1 MB descargado. Solo acepta IDs OSM, categorías solicitadas y puntos dentro del radio y de Nariño según los datos del índice. Devuelve hasta 50 coincidencias y muestra un aviso de cobertura limitada; no ofrece extracción exhaustiva ni paginación adicional. Los precios, horarios y gastronomía regional siguen sin verificarse. El índice no contiene todas las etiquetas de acceso: confirma entradas. Puedes desactivarlo con `PHOTON_FALLBACK_ENABLED=false`. Los IDs consultados alimentan el mapa y Gemini; las rutas en instancias frías todavía necesitan resolver sus IDs mediante Overpass y pueden usar el enlace externo si no está disponible.
+Si Overpass está caído, las búsquedas interactivas usan [Photon de Komoot](https://photon.komoot.io/), otro índice de datos OSM sin clave ni cuenta. Se limita a 10 solicitudes/minuto, una por 1,5 s, 8 s de espera y 1 MB descargado. Solo acepta IDs OSM, categorías solicitadas y puntos dentro del radio y de Nariño según los datos del índice. Devuelve hasta 50 coincidencias y muestra un aviso de cobertura limitada; no ofrece extracción exhaustiva ni paginación adicional. Los precios, horarios y gastronomía regional siguen sin verificarse. El índice no contiene todas las etiquetas de acceso: confirma entradas. Puedes desactivarlo con `PHOTON_FALLBACK_ENABLED=false`. Los registros OSM consultados llevan firma del servidor durante 24 horas. Las rutas en otra función de Vercel pueden comprobar esa firma y usar los destinos sin volver a Overpass. Usa GEMINI_API_KEY o PLACE_SIGNING_SECRET (secreto aleatorio estable, solo servidor) en todas las funciones; sin ambos la firma solo es válida dentro del proceso actual. Un registro alterado o vencido requiere consultar de nuevo sus IDs.
 
-Caché de búsqueda: 15 minutos, hasta 40 consultas; registro temporal: hasta 2000 lugares y 24 horas. Si falla el proveedor y existe una respuesta para **esa misma búsqueda** de menos de 24 horas, se devuelve etiquetada como caché anterior. Sin datos consultados, se muestra un error con opción de reintento. **No se generan destinos de relleno.** La caché está en memoria, se puede perder al reiniciar y no está compartida entre instancias de Vercel; este prototipo está dimensionado para bajo tráfico universitario.
+Caché de búsqueda: 15 minutos para Overpass y un minuto para Photon, hasta 40 consultas; registro temporal: hasta 2000 lugares y 24 horas. Si falla el proveedor y existe una respuesta para **esa misma búsqueda** de menos de 24 horas, se devuelve etiquetada como caché anterior. Sin datos consultados, se muestra un error con opción de reintento. **No se generan destinos de relleno.** La caché está en memoria, se puede perder al reiniciar y no está compartida entre instancias de Vercel; este prototipo está dimensionado para bajo tráfico universitario.
 
 Overpass es compartido y puede rechazar peticiones o estar inaccesible desde determinadas redes. Un 406/429 requiere esperar; un timeout puede ser del proveedor o de conectividad. Puedes cambiar `OVERPASS_API_URL` a una instancia compatible cuyos términos hayas revisado. No se configura ningún servicio de pago como fallback.
 
@@ -107,18 +107,18 @@ npm run check:gemini
 
 El comando verifica JSON estructurado y preguntas de seguimiento con el mismo SDK y validación del servidor. No imprime la clave, no inventa destinos y no sustituye la prueba de un itinerario completo con OSM. No forma parte de `npm test` ni del build, para evitar consumir cuota sin intención.
 
-Gemini puede pedir datos faltantes para un itinerario sin consultar Overpass. Una búsqueda directa de lugares consulta OSM sin exigir presupuesto ni duración. Tanto la búsqueda como un itinerario con destinos requieren que responda OSM.
+Gemini interpreta búsquedas, elecciones explícitas y puntos de partida. Pedir opciones no acepta visitas: «hoy quiero un café y luego un parque» busca ambas categorías. La persona elige con los botones o indicando nombres concretos; el recorrido usa exclusivamente esos IDs. Una vez consultados los lugares, aceptar, quitar y reordenar no requiere otra consulta a Gemini ni a Overpass.
 
 SDK oficial `@google/genai`, Interactions API y JSON validado con Zod. Flujo:
 
-1. Gemini interpreta intención (`explore`, `plan`, `clarify`), perfil, zona, categorías y nombre mediante un contrato permitido. No genera Overpass QL ni coordenadas.
-2. El servidor construye la consulta, obtiene registros OSM, normaliza, deduplica y selecciona candidatos relevantes.
-3. Gemini recibe **hasta 50 candidatos**, incluyendo visitas anteriores pertinentes. Solo puede devolver sus IDs. El cliente representa nombres y coordenadas originales.
-4. El servidor rechaza IDs inventados/restringidos, jornadas incoherentes y paradas incompatibles por distancia/tiempo orientativo. Si falla Gemini se planifica por reglas **sobre los mismos resultados OSM**, sin catálogo local.
+1. Gemini interpreta intención, perfil opcional, categorías, referencia, elecciones explícitas y dirección de salida mediante JSON validado. No genera coordenadas ni Overpass QL.
+2. El servidor consulta OSM/Photon, normaliza, deduplica y firma los registros. El navegador recibe hasta 50 resultados por página.
+3. El chat recibe nombres e IDs de hasta 75 registros consultados (resultados más visitas conservadas). Solo se aceptan IDs conocidos mencionados explícitamente; la IA no agrega sus recomendaciones por cuenta propia.
+4. El itinerario se construye con las visitas aceptadas y su orden. La búsqueda posterior conserva esa selección. La cuenta guarda también los IDs aceptados, sin requerir cambios a la tabla JSON de Supabase.
 
-Las etiquetas OSM y los mensajes se tratan como datos no confiables para instrucciones. No se añaden fotos externas sin licencia revisada. La fotografía incluida tiene atribución en `/fuentes`.
+Las etiquetas OSM y los mensajes se tratan como datos no confiables para instrucciones. «Ver foto del lugar» consulta Wikimedia Commons: utiliza los vínculos OSM a Commons/Wikidata o una entidad con nombre idéntico y coordenadas a menos de 200 m. Solo muestra imágenes CC BY, CC BY-SA, CC0 o dominio público con autor, licencia y enlace de origen; no sustituye una foto por otra cercana. La consulta es a petición, con caché de 24 horas y límites de frecuencia. Muchos cafés y negocios no tienen fotos libres: se ofrece Google Maps como enlace externo. No se usa Google Places ni se copian fotos de Google.
 
-Gemini: sin reintentos ni continuaciones automáticas, hasta 6 llamadas/minuto y 60 por ventana de 24 horas por instancia. Explorar o pedir aclaraciones consume una llamada; planificar normalmente usa dos (interpretación y agenda). El código no puede comprobar la facturación de tu clave: conserva el proyecto de Google sin billing para que exceder la cuota no implique cobros. No se usa Google Places, grounding de pago ni pagos. Evita datos personales: el nivel gratuito de Google puede usar mensajes para mejorar productos. Condiciones y privacidad en `/fuentes`.
+Gemini: sin reintentos ni continuaciones automáticas, hasta 6 llamadas/minuto y 60 por ventana de 24 horas por instancia. Cada mensaje utiliza como máximo una llamada de interpretación. Añadir, quitar o reordenar con botones no consume Gemini. El código no puede comprobar la facturación de tu clave: conserva el proyecto de Google sin billing para que exceder la cuota no implique cobros. No se usa Google Places, grounding de pago ni pagos. Evita datos personales: el nivel gratuito de Google puede usar mensajes para mejorar productos. Condiciones y privacidad en `/fuentes`.
 
 ### Modelo, versión y continuidad gratuita
 

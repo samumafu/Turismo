@@ -18,7 +18,10 @@ const featureSchema = z.object({
   properties: z.object({
     osm_type: z.enum(["N", "W", "R"]),
     osm_id: z.number().int().positive(),
-    name: z.string().min(1).max(180),
+    name: z.string().min(1).max(180).optional(),
+    street: z.string().optional(),
+    housenumber: z.string().optional(),
+    city: z.string().optional(),
     countrycode: z.string(),
     state: z.string(),
   }),
@@ -55,6 +58,10 @@ export function normalizeReference(data: unknown): Reference {
     const result = featureSchema.safeParse(raw);
     if (!result.success) continue;
     const { properties: p, geometry } = result.data;
+    const name =
+      p.name ||
+      [p.street, p.housenumber, p.city].filter(Boolean).join(" ").slice(0, 180);
+    if (!name) continue;
     const center = coordinateSchema.safeParse([
       geometry.coordinates[1],
       geometry.coordinates[0],
@@ -71,12 +78,12 @@ export function normalizeReference(data: unknown): Reference {
       matches.some(
         (m) =>
           m.reference.id === id ||
-          (normalize(m.reference.name) === normalize(p.name) &&
+          (normalize(m.reference.name) === normalize(name) &&
             haversine(m.center, center.data) < 150),
       )
     )
       continue;
-    matches.push({ center: center.data, reference: { id, name: p.name } });
+    matches.push({ center: center.data, reference: { id, name } });
   }
   if (!matches.length)
     throw new HttpError(

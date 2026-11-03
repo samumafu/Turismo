@@ -8,6 +8,7 @@ import { HttpError } from "./guard";
 import { OverpassUnavailableError, queryOverpass } from "./overpass";
 import { discoverPhoton } from "./photon";
 import { resolveSearchReference } from "./search-reference";
+import { signPlace, isVerifiedPlace } from "./place-verification";
 import {
   osmIdSchema,
   searchSpecSchema,
@@ -30,7 +31,10 @@ const inFlight = new Map<string, Promise<CacheEntry>>();
 function remember(places: Place[]) {
   for (const place of places) {
     if (registry.size >= 2000) registry.delete(registry.keys().next().value!);
-    registry.set(place.id, { place, expires: Date.now() + 24 * 3600000 });
+    registry.set(place.id, {
+      place,
+      expires: Date.parse(place.observedAt) + 24 * 3600000,
+    });
   }
 }
 export async function discoverPlaces(
@@ -71,6 +75,7 @@ export async function discoverPlaces(
           }
           const fresh = {
             ...result,
+            places: result.places.map(signPlace),
             observedAt,
             // Retry the primary after its cooldown instead of keeping fallback results for 15 minutes.
             expires: Date.now() + (origin === "photon" ? 60000 : 15 * 60000),
@@ -123,7 +128,11 @@ export async function discoverPlaces(
     notice,
   };
 }
-export async function resolvePlaces(ids: string[]): Promise<Place[]> {
+export async function resolvePlaces(
+  ids: string[],
+  snapshots: Place[] = [],
+): Promise<Place[]> {
+  remember(snapshots.filter((p) => ids.includes(p.id) && isVerifiedPlace(p)));
   const unique = [...new Set(ids)];
   if (
     unique.length > 30 ||
@@ -138,7 +147,7 @@ export async function resolvePlaces(ids: string[]): Promise<Place[]> {
       const now = new Date().toISOString();
       const upstream = await queryOverpass(buildResolveQuery(missing));
       const result = normalizeResult(upstream.data, now);
-      remember(result.places);
+      remember(result.places.map(signPlace));
     } catch (error) {
       if (error instanceof HttpError) throw error;
       throw new HttpError(

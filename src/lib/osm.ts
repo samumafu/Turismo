@@ -186,6 +186,10 @@ export function normalizeElement(
     note,
     observedAt,
     cuisine: t.cuisine?.slice(0, 140) || null,
+    ...(/^Q[1-9]\d*$/.test(t.wikidata ?? "") ? { wikidata: t.wikidata } : {}),
+    ...(/^File:/i.test(t.wikimedia_commons ?? "")
+      ? { commons: t.wikimedia_commons.slice(0, 250) }
+      : {}),
   });
   return parsed.success ? parsed.data : null;
 }
