@@ -1,4 +1,4 @@
-type AuthOperation = "login" | "register" | "forgot" | "code";
+type AuthOperation = "login" | "register" | "forgot" | "code" | "confirm";
 
 // Fixed messages only: never expose raw provider responses or request data.
 export function authErrorMessage(error: unknown, operation: AuthOperation) {
@@ -40,7 +40,9 @@ export function authErrorMessage(error: unknown, operation: AuthOperation) {
     return "El servicio de cuentas no está disponible temporalmente. Intenta más tarde.";
   return operation === "login"
     ? "No se pudo iniciar sesión. Revisa tus datos e inténtalo de nuevo."
-    : operation === "code"
-      ? "No se pudo cambiar la contraseña. Comprueba el código o solicita otro."
-      : "No se pudo completar el registro. Intenta de nuevo más tarde.";
+    : operation === "confirm"
+      ? "No se pudo verificar el correo. Comprueba el código o solicita otro."
+      : operation === "code"
+        ? "No se pudo cambiar la contraseña. Comprueba el código o solicita otro."
+        : "No se pudo completar el registro. Intenta de nuevo más tarde.";
 }

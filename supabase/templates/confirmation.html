@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+  <body
+    style="
+      margin: 0;
+      background: #f3f0e8;
+      color: #17312b;
+      font-family: Arial, sans-serif;
+    "
+  >
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      <tr>
+        <td style="padding: 40px 16px">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            style="
+              max-width: 560px;
+              margin: 0 auto;
+              background: #fff;
+              border-top: 5px solid #c66a35;
+            "
+          >
+            <tr>
+              <td style="padding: 36px">
+                <p
+                  style="
+                    margin: 0 0 24px;
+                    font-size: 12px;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    color: #7a4b2f;
+                  "
+                >
+                  Turismo Inteligente Pasto
+                </p>
+                <h1
+                  style="
+                    margin: 0 0 16px;
+                    font-family: Georgia, serif;
+                    font-size: 32px;
+                    line-height: 1.15;
+                  "
+                >
+                  Verifica tu correo
+                </h1>
+                <p style="margin: 0 0 24px; line-height: 1.6; color: #4e5e59">
+                  Escribe este código en la ventana de registro. Caduca según el
+                  tiempo definido en Supabase y solo puede usarse una vez.
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    padding: 18px 20px;
+                    background: #17312b;
+                    color: #fff;
+                    font-size: 30px;
+                    font-weight: 700;
+                    letter-spacing: 8px;
+                    text-align: center;
+                  "
+                >
+                  {{ .Token }}
+                </p>
+                <p
+                  style="
+                    margin: 24px 0 0;
+                    font-size: 13px;
+                    line-height: 1.6;
+                    color: #6b7672;
+                  "
+                >
+                  Si no intentaste crear esta cuenta, puedes ignorar el mensaje.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

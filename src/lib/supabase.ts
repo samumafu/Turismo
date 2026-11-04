@@ -10,7 +10,7 @@ export const accountsConfigured = Boolean(
 );
 
 export const passwordRecoveryEnabled =
-  process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_ENABLED === "true";
+  process.env.NEXT_PUBLIC_PASSWORD_RECOVERY_ENABLED !== "false";
 
 export function browserSupabase() {
   if (typeof window === "undefined") return null;

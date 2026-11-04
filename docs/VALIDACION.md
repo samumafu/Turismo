@@ -1,5 +1,11 @@
 # Cambio a descubrimiento dinámico · 2 de noviembre de 2026
 
+## Verificación de correo con Brevo · 3 de noviembre de 2026
+
+El registro ahora continúa con un código de seis dígitos y lo valida con Supabase antes de iniciar la sesión. La recuperación usa el mismo patrón para autorizar el cambio de contraseña, conserva el acceso oculto hasta tres fallos de credenciales y permite reenviar el código. Se añadieron plantillas separadas de confirmación y recuperación con `{{ .Token }}` y una guía de SMTP. Brevo solo transporta el correo: Supabase genera, vence y verifica los códigos.
+
+TypeScript, lint, 45 pruebas y el build de producción aprobaron. Next Dev Tools no reportó errores de compilación o ejecución y Chrome representó los formularios de acceso y registro. No se envió un correo real: la credencial facilitada era una API key de Brevo y el relay exige SMTP login, SMTP key y remitente verificado configurados en el panel de Supabase. La entrega queda pendiente de esa configuración externa y de un nuevo despliegue.
+
 ## Recuperación de búsquedas ante caída de Overpass · 3 de noviembre de 2026
 
 Se confirmó el 503 del despliegue al consultar museos de Pasto sin Gemini. Una consulta directa pequeña a Private.coffee también agotó el tiempo de espera. El transporte ahora valida respuestas, aplica un circuito de un minuto y permite un segundo Overpass configurable solo ante caída de red/5xx; 401/403/406/429 detienen la operación sin cambiar de proveedor. Los registros de diagnóstico solo incluyen host y causa técnica, sin nombres buscados ni conversaciones.

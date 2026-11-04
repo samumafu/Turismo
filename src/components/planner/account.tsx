@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { journeySnapshotSchema, usePlanner } from "./provider";
 
-type FormMode = "login" | "register" | "forgot" | "code";
+type FormMode = "login" | "register" | "confirm" | "forgot" | "code";
 const pendingJourneyKey = "turismo-narino:pending-registration";
 
 export function Account() {
@@ -240,9 +240,20 @@ export function Account() {
         setMessage(
           data.session
             ? "Tu cuenta está lista."
-            : "Revisa tu correo para confirmar tu cuenta antes de iniciar sesión.",
+            : "Te enviamos un código de 6 dígitos. Escríbelo para verificar tu correo.",
         );
-        if (!data.session) setMode("login");
+        if (!data.session) setMode("confirm");
+      } else if (mode === "confirm") {
+        const { error } = await supabase.auth.verifyOtp({
+          email: email.trim(),
+          token: code.trim(),
+          type: "email",
+        });
+        if (error) throw error;
+        setCode("");
+        setLoginFailures(0);
+        setMode("login");
+        setMessage("Correo verificado. Tu cuenta ya está lista.");
       } else if (mode === "forgot") {
         if (!passwordRecoveryEnabled) {
           setMessage(
@@ -283,6 +294,30 @@ export function Account() {
           /* Storage may be unavailable. */
         }
       }
+      setMessage(authErrorMessage(error, mode));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendCode() {
+    const supabase = browserSupabase();
+    if (!supabase || (mode !== "confirm" && mode !== "code")) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const { error } =
+        mode === "confirm"
+          ? await supabase.auth.resend({
+              type: "signup",
+              email: email.trim(),
+            })
+          : await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) throw error;
+      setMessage(
+        "Si la solicitud es válida, recibirás un código nuevo. Revisa también correo no deseado.",
+      );
+    } catch (error) {
       setMessage(authErrorMessage(error, mode));
     } finally {
       setBusy(false);
@@ -358,11 +393,17 @@ export function Account() {
               <h2>
                 {mode === "register"
                   ? "Crea tu cuenta"
-                  : mode === "forgot" || mode === "code"
-                    ? "Recupera tu acceso"
-                    : "Qué bueno verte de nuevo"}
+                  : mode === "confirm"
+                    ? "Verifica tu correo"
+                    : mode === "forgot" || mode === "code"
+                      ? "Recupera tu acceso"
+                      : "Qué bueno verte de nuevo"}
               </h2>
-              <p>Guarda tu viaje y retómalo cuando quieras.</p>
+              <p>
+                {mode === "confirm"
+                  ? `Enviamos el código a ${email}.`
+                  : "Guarda tu viaje y retómalo cuando quieras."}
+              </p>
               <form onSubmit={submit}>
                 <FieldGroup>
                   <Field>
@@ -379,23 +420,25 @@ export function Account() {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </Field>
-                  {mode === "code" ? (
+                  {mode === "code" || mode === "confirm" ? (
                     <Field>
                       <FieldLabel htmlFor="account-code">
-                        Código recibido
+                        Código de 6 dígitos
                       </FieldLabel>
                       <Input
                         id="account-code"
                         name="code"
                         inputMode="numeric"
                         autoComplete="one-time-code"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
                         required
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                       />
                     </Field>
                   ) : null}
-                  {mode !== "forgot" ? (
+                  {mode !== "forgot" && mode !== "confirm" ? (
                     <Field>
                       <FieldLabel htmlFor="account-password">
                         {mode === "code" ? "Nueva contraseña" : "Contraseña"}
@@ -420,11 +463,13 @@ export function Account() {
                       ? "Un momento…"
                       : mode === "register"
                         ? "Crear cuenta"
-                        : mode === "forgot"
-                          ? "Enviar código"
-                          : mode === "code"
-                            ? "Cambiar contraseña"
-                            : "Iniciar sesión"}
+                        : mode === "confirm"
+                          ? "Verificar correo"
+                          : mode === "forgot"
+                            ? "Enviar código"
+                            : mode === "code"
+                              ? "Cambiar contraseña"
+                              : "Iniciar sesión"}
                   </Button>
                 </FieldGroup>
               </form>
@@ -459,15 +504,27 @@ export function Account() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setMessage("");
-                    }}
-                  >
-                    Volver a iniciar sesión
-                  </button>
+                  <>
+                    {mode === "confirm" || mode === "code" ? (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void resendCode()}
+                      >
+                        Enviar un código nuevo
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("login");
+                        setCode("");
+                        setMessage("");
+                      }}
+                    >
+                      Volver a iniciar sesión
+                    </button>
+                  </>
                 )}
               </div>
               <Button variant="outline" disabled className="account-google">

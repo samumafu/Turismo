@@ -8,6 +8,10 @@ test("authentication errors distinguish confirmation, SMTP, credentials and requ
     /confirmar el correo/,
   );
   assert.match(
+    authErrorMessage({ code: "otp_expired", status: 403 }, "confirm"),
+    /expiró/,
+  );
+  assert.match(
     authErrorMessage(
       {
         code: "unexpected_failure",
