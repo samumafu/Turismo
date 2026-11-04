@@ -1,6 +1,6 @@
 # Brevo + Supabase Auth
 
-La aplicación usa Supabase Auth para crear y validar códigos de un solo uso. Brevo solo entrega los correos mediante SMTP. Las claves de Brevo no se guardan en Next.js, Vercel ni el repositorio.
+La aplicación usa Supabase Auth para generar y validar enlaces de confirmación y recuperación. Brevo entrega los correos mediante SMTP. Las claves de Brevo no se guardan en Next.js, Vercel ni el repositorio.
 
 ## 1. Preparar Brevo
 
@@ -27,22 +27,27 @@ En **Authentication → Sign In / Providers → Email**:
 
 En **Authentication → Rate Limits**, conserva límites bajos para el prototipo. En **Authentication → Attack Protection**, activa CAPTCHA antes de abrir el registro a tráfico público.
 
-## 3. Plantillas con código
+## 3. Plantillas con botón
 
 En **Authentication → Email Templates**:
 
-1. En **Confirm signup**, usa un asunto como `Tu código para verificar el correo` y pega `supabase/templates/confirmation.html`.
-2. En **Reset password**, usa `Tu código para recuperar el acceso` y pega `supabase/templates/recovery.html`.
+1. En **Confirm signup**, usa el asunto `Confirma tu correo` y pega el contenido actualizado de `supabase/templates/confirmation.html`.
+2. En **Reset password**, usa `Recupera tu acceso` y pega el contenido actualizado de `supabase/templates/recovery.html`.
 
-Ambas plantillas deben conservar `{{ .Token }}`. La interfaz espera seis dígitos y los valida directamente con Supabase. No agregues enlaces rastreados al correo.
+Ambas plantillas deben conservar `{{ .ConfirmationURL }}` en el botón. Supabase verifica el enlace y devuelve la sesión al navegador. La aplicación comprueba el usuario con Supabase, elimina los tokens de la URL y abre el planificador o el formulario de nueva contraseña. Los errores y enlaces vencidos ofrecen volver a la cuenta para solicitar otro enlace. No hay campos ni lógica de códigos en la aplicación.
+
+**Actualizar el HTML local y hacer push no cambia las plantillas alojadas en Supabase:** pega y guarda ambas en su panel. Desactiva el seguimiento de enlaces en Brevo. Si un filtro de correo consume el enlace antes de abrirlo, solicita otro desde «Confirmar mi correo»; es un enlace de un solo uso.
 
 ## 4. URL y despliegue
 
 En **Authentication → URL Configuration**:
 
 - Site URL: `https://turismo-seven-mu.vercel.app`
-- Redirect URL permitida: `https://turismo-seven-mu.vercel.app/planificar`
-- Para desarrollo: `http://localhost:3000/planificar`
+- Redirect URL permitida: `https://turismo-seven-mu.vercel.app/auth/confirmar`
+- Redirect URL permitida: `https://turismo-seven-mu.vercel.app/auth/recuperar`
+- Para desarrollo, añade `http://localhost:3000/auth/confirmar` y `http://localhost:3000/auth/recuperar`.
+
+El registro y el reenvío usan `emailRedirectTo` con `/auth/confirmar`; la recuperación usa `redirectTo` con `/auth/recuperar`. Se toma el origen desde el que abres la app. Para otros dominios de Vercel, autoriza también esas dos rutas. Conserva Site URL apuntando a producción, no a localhost.
 
 En Vercel deben seguir configuradas `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. La recuperación queda activa por defecto; `NEXT_PUBLIC_PASSWORD_RECOVERY_ENABLED=false` sirve únicamente como interruptor temporal.
 
@@ -50,7 +55,8 @@ En Vercel deben seguir configuradas `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SU
 
 1. Registra un correo real que no sea miembro del equipo de Supabase.
 2. Comprueba en Brevo **Transactional → Logs** que el mensaje fue entregado.
-3. Ingresa el código en la app e inicia sesión.
-4. Falla la contraseña tres veces, abre recuperación, solicita el código y define una contraseña nueva.
+3. Pulsa **Confirmar mi correo** en el email: Supabase confirma, la app comprueba la sesión y vuelve a `/planificar` con el acceso iniciado.
+4. Falla la contraseña tres veces, abre recuperación y solicita el enlace. Pulsa **Crear nueva contraseña**, completa los dos campos y guarda. Volverás al planificador con tu sesión iniciada.
+5. Un enlace vencido debe mostrar un error útil, sin afirmar que confirmó el correo. La página de recuperación sin enlace válido no muestra el formulario.
 
 No desactives Confirm email para resolver errores SMTP. Revisa primero los Auth Logs de Supabase y los Transactional Logs de Brevo.

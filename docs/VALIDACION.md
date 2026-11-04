@@ -1,5 +1,11 @@
 # Cambio a descubrimiento dinámico · 2 de noviembre de 2026
 
+## Confirmación y recuperación mediante enlaces
+
+Se retiraron los formularios y verificaciones de códigos. Registro y reenvío envían `emailRedirectTo=/auth/confirmar`; la recuperación envía `redirectTo=/auth/recuperar`. Las dos plantillas usan `{{ .ConfirmationURL }}`. La confirmación comprueba con Supabase el usuario de la sesión devuelta y abre el planificador. La recuperación solo muestra los dos campos de contraseña al recibir una sesión de recuperación válida. Se limpian los tokens del fragmento de URL al terminar. Un enlace vencido o ausente no se presenta como confirmación exitosa.
+
+TypeScript, lint y build aprobaron. Tres pruebas de Auth cubren errores, sesiones no coincidentes, usuario sin confirmar y separación de confirmación/recuperación. Chrome con el SDK real y HTTP de Supabase simulado comprobó registro, retorno al planificador con sesión, cambio de contraseña y rechazo de recuperación sin enlace. Next Dev Tools no reportó errores. No se enviaron emails ni se modificó la configuración de Supabase en esta etapa; hay que pegar las plantillas actualizadas, autorizar las dos rutas y desplegar.
+
 ## Verificación de correo con Brevo · 3 de noviembre de 2026
 
 El registro ahora continúa con un código de seis dígitos y lo valida con Supabase antes de iniciar la sesión. La recuperación usa el mismo patrón para autorizar el cambio de contraseña, conserva el acceso oculto hasta tres fallos de credenciales y permite reenviar el código. Se añadieron plantillas separadas de confirmación y recuperación con `{{ .Token }}` y una guía de SMTP. Brevo solo transporta el correo: Supabase genera, vence y verifica los códigos.

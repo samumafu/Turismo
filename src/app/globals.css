@@ -556,6 +556,30 @@
   max-width: 300px;
   text-align: right;
 }
+.email-confirmation-page {
+  display: grid;
+  align-items: center;
+  min-height: 65svh;
+  padding: 64px 24px;
+  background: var(--muted);
+}
+.email-confirmation {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+.email-confirmation h1 {
+  font-size: clamp(32px, 6vw, 52px);
+  line-height: 1.12;
+}
+.email-confirmation > p {
+  color: var(--muted-foreground);
+  line-height: 1.7;
+}
 @media (max-width: 760px) {
   .account-area {
     width: 100%;

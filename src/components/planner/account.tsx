@@ -9,12 +9,13 @@ import {
   passwordRecoveryEnabled,
 } from "@/lib/supabase";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { emailConfirmationPath, passwordRecoveryPath } from "@/lib/auth-links";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { journeySnapshotSchema, usePlanner } from "./provider";
 
-type FormMode = "login" | "register" | "confirm" | "forgot" | "code";
+type FormMode = "login" | "register" | "confirm" | "forgot";
 const pendingJourneyKey = "turismo-narino:pending-registration";
 
 export function Account() {
@@ -25,7 +26,6 @@ export function Account() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginFailures, setLoginFailures] = useState(0);
-  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [syncEnabled, setSyncEnabled] = useState(false);
@@ -82,11 +82,40 @@ export function Account() {
   useEffect(() => {
     const supabase = browserSupabase();
     if (!supabase) return;
-    void supabase.auth
-      .getSession()
-      .then(({ data }) => setUser(data.session?.user ?? null));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    void supabase.auth.getSession().then(({ data }) => {
+      const nextUser = data.session?.user ?? null;
+      setUser(nextUser);
+      const url = new URL(window.location.href);
+      if (nextUser?.email_confirmed_at && url.searchParams.has("correo")) {
+        setMessage(
+          url.searchParams.get("correo") === "recuperado"
+            ? "Contraseña actualizada. Ya puedes continuar tu viaje."
+            : "Correo confirmado. Tu cuenta ya está lista.",
+        );
+        url.searchParams.delete("correo");
+        window.history.replaceState(
+          window.history.state,
+          "",
+          url.pathname + url.search + url.hash,
+        );
+      }
+      if (!nextUser && url.searchParams.get("cuenta") === "confirmar") {
+        setOpen(true);
+        setMode("confirm");
+        url.searchParams.delete("cuenta");
+        window.history.replaceState(
+          window.history.state,
+          "",
+          url.pathname + url.search + url.hash,
+        );
+      }
+    });
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (event === "SIGNED_IN") {
+        setPassword("");
+        setMode("login");
+      }
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -203,6 +232,10 @@ export function Account() {
     setBusy(true);
     setMessage("");
     try {
+      const emailRedirectTo = new URL(
+        emailConfirmationPath,
+        window.location.origin,
+      ).href;
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -211,6 +244,7 @@ export function Account() {
         if (error) {
           if (error.code === "invalid_credentials")
             setLoginFailures((count) => count + 1);
+          if (error.code === "email_not_confirmed") setMode("confirm");
           throw error;
         }
         setLoginFailures(0);
@@ -227,6 +261,7 @@ export function Account() {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: { emailRedirectTo },
         });
         if (error) throw error;
         if (data.session) {
@@ -240,20 +275,19 @@ export function Account() {
         setMessage(
           data.session
             ? "Tu cuenta está lista."
-            : "Te enviamos un código de 6 dígitos. Escríbelo para verificar tu correo.",
+            : "Abre el correo y pulsa «Confirmar mi correo». Volverás al planificador con tu cuenta confirmada.",
         );
         if (!data.session) setMode("confirm");
       } else if (mode === "confirm") {
-        const { error } = await supabase.auth.verifyOtp({
+        const { error } = await supabase.auth.resend({
+          type: "signup",
           email: email.trim(),
-          token: code.trim(),
-          type: "email",
+          options: { emailRedirectTo },
         });
         if (error) throw error;
-        setCode("");
-        setLoginFailures(0);
-        setMode("login");
-        setMessage("Correo verificado. Tu cuenta ya está lista.");
+        setMessage(
+          "Si tu cuenta requiere confirmación, recibirás un enlace nuevo. Revisa también correo no deseado.",
+        );
       } else if (mode === "forgot") {
         if (!passwordRecoveryEnabled) {
           setMessage(
@@ -263,28 +297,15 @@ export function Account() {
         }
         const { error } = await supabase.auth.resetPasswordForEmail(
           email.trim(),
+          {
+            redirectTo: new URL(passwordRecoveryPath, window.location.origin)
+              .href,
+          },
         );
         if (error) throw error;
-        setMode("code");
         setMessage(
-          "Si existe una cuenta, recibirás un código de recuperación.",
+          "Si existe una cuenta, recibirás un enlace para elegir una contraseña nueva.",
         );
-      } else {
-        const { error } = await supabase.auth.verifyOtp({
-          email: email.trim(),
-          token: code.trim(),
-          type: "recovery",
-        });
-        if (error) throw error;
-        const { error: updateError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (updateError) throw updateError;
-        setPassword("");
-        setCode("");
-        setLoginFailures(0);
-        setMode("login");
-        setMessage("Contraseña actualizada.");
       }
     } catch (error) {
       if (mode === "register") {
@@ -294,30 +315,6 @@ export function Account() {
           /* Storage may be unavailable. */
         }
       }
-      setMessage(authErrorMessage(error, mode));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function resendCode() {
-    const supabase = browserSupabase();
-    if (!supabase || (mode !== "confirm" && mode !== "code")) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      const { error } =
-        mode === "confirm"
-          ? await supabase.auth.resend({
-              type: "signup",
-              email: email.trim(),
-            })
-          : await supabase.auth.resetPasswordForEmail(email.trim());
-      if (error) throw error;
-      setMessage(
-        "Si la solicitud es válida, recibirás un código nuevo. Revisa también correo no deseado.",
-      );
-    } catch (error) {
       setMessage(authErrorMessage(error, mode));
     } finally {
       setBusy(false);
@@ -395,14 +392,16 @@ export function Account() {
                   ? "Crea tu cuenta"
                   : mode === "confirm"
                     ? "Verifica tu correo"
-                    : mode === "forgot" || mode === "code"
+                    : mode === "forgot"
                       ? "Recupera tu acceso"
                       : "Qué bueno verte de nuevo"}
               </h2>
               <p>
                 {mode === "confirm"
-                  ? `Enviamos el código a ${email}.`
-                  : "Guarda tu viaje y retómalo cuando quieras."}
+                  ? "Pulsa el botón del correo para confirmar tu cuenta. Desde aquí puedes solicitar otro enlace."
+                  : mode === "forgot"
+                    ? "Te enviaremos un enlace para crear una contraseña nueva."
+                    : "Guarda tu viaje y retómalo cuando quieras."}
               </p>
               <form onSubmit={submit}>
                 <FieldGroup>
@@ -415,33 +414,17 @@ export function Account() {
                       name="email"
                       type="email"
                       autoComplete="email"
+                      disabled={busy}
+                      maxLength={254}
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </Field>
-                  {mode === "code" || mode === "confirm" ? (
-                    <Field>
-                      <FieldLabel htmlFor="account-code">
-                        Código de 6 dígitos
-                      </FieldLabel>
-                      <Input
-                        id="account-code"
-                        name="code"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        pattern="[0-9]{6}"
-                        maxLength={6}
-                        required
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                      />
-                    </Field>
-                  ) : null}
                   {mode !== "forgot" && mode !== "confirm" ? (
                     <Field>
                       <FieldLabel htmlFor="account-password">
-                        {mode === "code" ? "Nueva contraseña" : "Contraseña"}
+                        Contraseña
                       </FieldLabel>
                       <Input
                         id="account-password"
@@ -451,6 +434,7 @@ export function Account() {
                           mode === "login" ? "current-password" : "new-password"
                         }
                         minLength={mode === "login" ? 1 : 8}
+                        disabled={busy}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -464,18 +448,27 @@ export function Account() {
                       : mode === "register"
                         ? "Crear cuenta"
                         : mode === "confirm"
-                          ? "Verificar correo"
+                          ? "Reenviar enlace de confirmación"
                           : mode === "forgot"
-                            ? "Enviar código"
-                            : mode === "code"
-                              ? "Cambiar contraseña"
-                              : "Iniciar sesión"}
+                            ? "Enviar enlace de recuperación"
+                            : "Iniciar sesión"}
                   </Button>
                 </FieldGroup>
               </form>
               <div className="account-links">
                 {mode === "login" ? (
                   <>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setMode("confirm");
+                        setPassword("");
+                        setMessage("");
+                      }}
+                    >
+                      Confirmar mi correo
+                    </button>
                     {loginFailures >= 3 ? (
                       <button
                         type="button"
@@ -505,20 +498,10 @@ export function Account() {
                   </>
                 ) : (
                   <>
-                    {mode === "confirm" || mode === "code" ? (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void resendCode()}
-                      >
-                        Enviar un código nuevo
-                      </button>
-                    ) : null}
                     <button
                       type="button"
                       onClick={() => {
                         setMode("login");
-                        setCode("");
                         setMessage("");
                       }}
                     >

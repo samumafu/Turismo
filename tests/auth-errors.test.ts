@@ -20,7 +20,14 @@ test("authentication errors distinguish confirmation, SMTP, credentials and requ
       },
       "register",
     ),
-    /servicio de correo/,
+    /Auth Log/,
+  );
+  assert.match(
+    authErrorMessage(
+      { code: "email_address_not_authorized", status: 400 },
+      "register",
+    ),
+    /Custom SMTP/,
   );
   assert.match(
     authErrorMessage({ code: "invalid_credentials", status: 400 }, "login"),

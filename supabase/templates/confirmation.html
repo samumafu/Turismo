@@ -47,8 +47,8 @@
                   Verifica tu correo
                 </h1>
                 <p style="margin: 0 0 24px; line-height: 1.6; color: #4e5e59">
-                  Escribe este código en la ventana de registro. Caduca según el
-                  tiempo definido en Supabase y solo puede usarse una vez.
+                  Pulsa el botón para confirmar tu correo y volver al
+                  planificador con tu cuenta lista.
                 </p>
                 <p
                   style="
@@ -56,13 +56,16 @@
                     padding: 18px 20px;
                     background: #17312b;
                     color: #fff;
-                    font-size: 30px;
+                    font-size: 16px;
                     font-weight: 700;
-                    letter-spacing: 8px;
                     text-align: center;
                   "
                 >
-                  {{ .Token }}
+                  <a
+                    href="{{ .ConfirmationURL }}"
+                    style="display: block; color: #fff; text-decoration: none"
+                    >Confirmar mi correo</a
+                  >
                 </p>
                 <p
                   style="

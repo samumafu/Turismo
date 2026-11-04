@@ -47,8 +47,8 @@
                   Recupera tu acceso
                 </h1>
                 <p style="margin: 0 0 24px; line-height: 1.6; color: #4e5e59">
-                  Usa este código para establecer una contraseña nueva. El
-                  código es de un solo uso.
+                  Pulsa el botón para elegir una contraseña nueva. Este enlace
+                  es personal y solo puede usarse una vez.
                 </p>
                 <p
                   style="
@@ -56,13 +56,16 @@
                     padding: 18px 20px;
                     background: #17312b;
                     color: #fff;
-                    font-size: 30px;
+                    font-size: 16px;
                     font-weight: 700;
-                    letter-spacing: 8px;
                     text-align: center;
                   "
                 >
-                  {{ .Token }}
+                  <a
+                    href="{{ .ConfirmationURL }}"
+                    style="display: block; color: #fff; text-decoration: none"
+                    >Crear nueva contraseña</a
+                  >
                 </p>
                 <p
                   style="
@@ -72,8 +75,8 @@
                     color: #6b7672;
                   "
                 >
-                  Si no solicitaste recuperar tu cuenta, no compartas el código
-                  y puedes ignorar este mensaje.
+                  Si no solicitaste recuperar tu cuenta, puedes ignorar este
+                  mensaje.
                 </p>
               </td>
             </tr>
