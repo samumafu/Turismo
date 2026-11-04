@@ -21,23 +21,25 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
   let now = Date.now();
   const clock = mock.method(Date, "now", () => now);
   let modelCalls = 0;
-  let osmCalls = 0;
+  let mapsCalls = 0;
+  const mapKeys = [
+    "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+    "GOOGLE_MAPS_SERVER_API_KEY",
+  ] as const;
+  const previousMaps = mapKeys.map((k) => process.env[k]);
+  for (const k of mapKeys) process.env[k] = "test-map-key";
   let quota = false;
   const upstream = mock.method(
     globalThis,
     "fetch",
     async (url: RequestInfo | URL, init?: RequestInit) => {
-      if (String(url).includes("/interpreter")) {
-        osmCalls++;
-        const raw = rawFixture(3);
+      if (String(url).includes("places.googleapis.com")) {
+        mapsCalls++;
         return Response.json({
-          ...raw,
-          elements: raw.elements.map((p, i) => ({
+          places: rawFixture(3).places.map((p, i) => ({
             ...p,
-            tags: {
-              name: "Opción " + (i + 1),
-              ...(i === 1 ? { leisure: "park" } : { amenity: "cafe" }),
-            },
+            displayName: { text: "Opci\u00f3n " + (i + 1) },
+            types: i === 1 ? ["park"] : ["cafe"],
           })),
         });
       }
@@ -71,7 +73,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
         regionalFood: false,
         selection: {
           add: data.knownPlaces?.length
-            ? [data.knownPlaces[0].id, "osm:node:999999999"]
+            ? [data.knownPlaces[0].id, "google:FakePlace999999999"]
             : [],
           remove: [],
         },
@@ -91,7 +93,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
   try {
     const hello = await call({ messages: [{ role: "user", content: "Hola" }] });
     assert.equal(hello.action, "clarify");
-    assert.equal(osmCalls, 0);
+    assert.equal(mapsCalls, 0);
     const options = await call({
       messages: [
         {
@@ -113,7 +115,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     });
     assert.deepEqual(itineraryIds(plan.itinerary), chosen);
     assert.equal(modelCalls - before, 1);
-    assert.equal(osmCalls, 1);
+    assert.equal(mapsCalls, 1);
     assert.equal(plan.profile.budgetCOP, null); // Budget is not required to accept two visits.
     const suggestions = await call({
       messages: [{ role: "user", content: "Busca más cafeterías" }],
@@ -148,6 +150,10 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
   } finally {
     upstream.mock.restore();
     clock.mock.restore();
+    mapKeys.forEach((k, i) => {
+      if (previousMaps[i] === undefined) delete process.env[k];
+      else process.env[k] = previousMaps[i];
+    });
     if (previousKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = previousKey;
   }

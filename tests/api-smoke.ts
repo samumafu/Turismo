@@ -20,7 +20,7 @@ const response = await post("/api/places/search", {
 });
 assert.equal(response.status, 200, await response.clone().text());
 const result = searchResponseSchema.parse(await response.json());
-assert.ok(result.places.length > 0, "No museums returned by live OSM query");
+assert.ok(result.places.length > 0, "No museums returned by live Google query");
 const reply = await post("/api/chat", {
   messages: [
     {
@@ -31,6 +31,7 @@ const reply = await post("/api/chat", {
   ],
   search: result.spec,
   selectedIds: [result.places[0].id],
+  knownPlaces: result.places,
   demo: true,
 });
 assert.equal(reply.status, 200, await reply.clone().text());
@@ -38,5 +39,5 @@ const plan = chatResponseSchema.parse(await reply.json());
 assert.ok(plan.itinerary);
 assert.ok(plan.places.length);
 console.log(
-  `LIVE OSM OK: ${result.total} results, ${result.source}; grounded chat itinerary generated.`,
+  `LIVE GOOGLE MAPS OK: ${result.total} results, ${result.source}; grounded chat itinerary generated.`,
 );

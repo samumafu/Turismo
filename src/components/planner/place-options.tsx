@@ -1,6 +1,5 @@
 "use client";
-import { useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Plus, LoaderCircle } from "lucide-react";
 import { usePlanner } from "./provider";
 import { mapsLink } from "@/lib/places";
 import { PlacePhoto } from "@/components/discovery/place-photo";
@@ -8,7 +7,6 @@ import { GoogleAttribution } from "@/components/discovery/google-attribution";
 import { Button } from "@/components/ui/button";
 export function PlaceOptions() {
   const { state, actions } = usePlanner();
-  const [expanded, setExpanded] = useState(false);
   if (!state.results.length) return null;
   const groups = Map.groupBy(state.results, (p) => p.category);
   return (
@@ -16,13 +14,14 @@ export function PlaceOptions() {
       <h2 id="place-options-title">Elige tus visitas</h2>
       <GoogleAttribution places={state.results} />
       <p className="map-note">
-        Añade solo los lugares que quieras incluir en tu recorrido.
+        {state.results.length} lugares encontrados. Añade los que quieras
+        visitar y abre sus fotos.
       </p>
       {[...groups].map(([category, records]) => (
         <section key={category}>
           <h3>{category}</h3>
           <ul>
-            {(expanded ? records : records.slice(0, 3)).map((place) => {
+            {records.map((place) => {
               const accepted = state.selectedIds.includes(place.id);
               return (
                 <li key={place.id} className="place-option">
@@ -36,7 +35,7 @@ export function PlaceOptions() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      Google Maps y fotos
+                      Ver ficha en Google Maps
                     </a>
                   </div>
                   <Button
@@ -55,7 +54,11 @@ export function PlaceOptions() {
                     ) : (
                       <Plus data-icon="inline-start" aria-hidden="true" />
                     )}
-                    {accepted ? "Añadido · quitar" : "Añadir a mi itinerario"}
+                    {place.availability === "restringido"
+                      ? "Acceso por confirmar"
+                      : accepted
+                        ? "Añadido · quitar"
+                        : "Añadir a mi itinerario"}
                   </Button>
                 </li>
               );
@@ -63,9 +66,22 @@ export function PlaceOptions() {
           </ul>
         </section>
       ))}
-      {!expanded && [...groups.values()].some((g) => g.length > 3) ? (
-        <Button variant="ghost" onClick={() => setExpanded(true)}>
-          Ver más opciones
+      {state.action === "explore" &&
+      state.discovery?.nextPageToken &&
+      state.results.length < 60 ? (
+        <Button
+          variant="outline"
+          disabled={state.busy}
+          onClick={() => void actions.morePlaces()}
+        >
+          {state.busy ? (
+            <LoaderCircle
+              data-icon="inline-start"
+              className="animate-spin"
+              aria-hidden="true"
+            />
+          ) : null}
+          {state.busy ? "Cargando lugares…" : "Ver más lugares"}
         </Button>
       ) : null}
     </section>

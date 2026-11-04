@@ -26,6 +26,7 @@ import {
   googleIdSchema,
   placeSchema,
   searchSpecSchema,
+  searchResponseSchema,
   type Place,
   type SearchResponse,
   type SearchSpec,
@@ -38,8 +39,8 @@ const greeting: ChatMessage = {
 };
 export const journeySnapshotSchema = z.object({
   action: z.enum(["explore", "plan", "clarify"]).optional(),
-  results: z.array(placeSchema).max(50),
-  places: z.array(placeSchema).max(75),
+  results: z.array(placeSchema).max(60),
+  places: z.array(placeSchema).max(100),
   search: searchSpecSchema,
   profile: profileSchema,
   itinerary: itinerarySchema.nullable(),
@@ -77,6 +78,7 @@ type PlannerContextValue = {
     restore: () => void;
     loadJourney: (snapshot: JourneySnapshot) => Promise<boolean>;
     discover: (result: SearchResponse) => void;
+    morePlaces: () => Promise<void>;
     selectPlaces: (ids: string[], search: SearchSpec) => void;
   };
   meta: { maxMessageLength: number };
@@ -177,7 +179,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
               selectedIds.includes(p.id) ||
               s.results.some((v) => v.id === p.id),
           )
-          .slice(0, 75);
+          .slice(0, 100);
         return {
           ...s,
           action: result.action,
@@ -305,7 +307,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
             result.places.some((v) => v.id === p.id) ||
             s.selectedIds.includes(p.id),
         )
-        .slice(0, 75),
+        .slice(0, 100),
       search: result.spec,
       notice: result.notice,
       error: null,
@@ -313,8 +315,51 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         total: result.total,
         source: result.source,
         observedAt: result.observedAt,
+        nextPageToken: result.nextPageToken,
       },
     }));
+  }
+  async function morePlaces() {
+    const token = state.discovery?.nextPageToken;
+    if (lock.current || !token || state.results.length >= 60) return;
+    lock.current = true;
+    setState((s) => ({ ...s, busy: true, error: null }));
+    try {
+      const response = await fetch("/api/places/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spec: state.search, pageToken: token }),
+        signal: AbortSignal.timeout(20000),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error || "No se pudieron cargar más lugares.");
+      const result = searchResponseSchema.parse(body);
+      const places = [
+        ...new Map(
+          [...state.results, ...result.places].map((p) => [p.id, p]),
+        ).values(),
+      ].slice(0, 60);
+      setState((s) => ({ ...s, busy: false }));
+      lock.current = false;
+      discover({
+        ...result,
+        places,
+        total: places.length,
+        nextPageToken: places.length >= 60 ? null : result.nextPageToken,
+      });
+    } catch (error) {
+      setState((s) => ({
+        ...s,
+        busy: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar más lugares.",
+      }));
+    } finally {
+      lock.current = false;
+    }
   }
   function selectPlaces(ids: string[], search: SearchSpec) {
     if (lock.current) return;
@@ -385,6 +430,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           restore,
           loadJourney,
           discover,
+          morePlaces,
           selectPlaces,
           togglePlace,
           movePlace,

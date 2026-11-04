@@ -67,7 +67,7 @@ export const chatRequestSchema = z
     demo: z.boolean().default(false),
     search: searchSpecSchema.optional(),
     selectedIds: z.array(placeIdSchema).max(25).default([]),
-    knownPlaces: z.array(placeSchema).max(75).optional(),
+    knownPlaces: z.array(placeSchema).max(100).optional(),
   })
   .refine(
     (v) => v.messages.at(-1)?.role === "user",
@@ -82,7 +82,12 @@ export const chatResponseSchema = modelResponseSchema.extend({
   selectedIds: z.array(placeIdSchema).max(25).optional(),
   origin: agreedOriginSchema.optional(),
   discovery: z
-    .object({ total: z.number(), source: z.string(), observedAt: z.string() })
+    .object({
+      total: z.number(),
+      source: z.string(),
+      observedAt: z.string(),
+      nextPageToken: z.string().max(4096).nullable().default(null),
+    })
     .optional(),
 });
 export type Profile = z.infer<typeof profileSchema>;

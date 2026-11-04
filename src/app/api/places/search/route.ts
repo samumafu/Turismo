@@ -10,15 +10,20 @@ export const maxDuration = 40;
 export async function POST(request: Request) {
   try {
     guardRequest(request, "discovery");
-    const parsed = searchRequestSchema.safeParse(await readJson(request, 3000));
+    const parsed = searchRequestSchema.safeParse(
+      await readJson(request, 10000),
+    );
     if (!parsed.success)
       throw new HttpError(
         400,
         "Revisa la zona, categoría y radio (entre 500 m y 25 km).",
       );
-    const { text, spec, offset } = parsed.data;
+    const { text, spec, pageToken } = parsed.data;
     return Response.json(
-      await discoverPlaces(text ? interpretSearch(text, spec) : spec, offset),
+      await discoverPlaces(
+        text ? interpretSearch(text, spec) : spec,
+        pageToken,
+      ),
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

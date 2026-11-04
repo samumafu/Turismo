@@ -1,4 +1,4 @@
-// Explicit live check: one real Gemini call, no Overpass and no sample POIs.
+// Explicit live check: one real Gemini call, no Places and no sample POIs.
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import { chatRequestSchema, missingFields } from "../src/lib/schemas";
@@ -18,9 +18,9 @@ if (!key) {
     });
     const reply = await geminiReply(input, key, []);
     if (reply.itinerary !== null || !missingFields(reply.profile).length)
-      throw new Error("A plan requires actual OSM candidates");
+      throw new Error("A plan requires actual Google candidates");
     console.log(
-      `Gemini real OK (${process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"}): respuesta JSON validada y preguntas de seguimiento. Clave oculta. No se consultó Overpass.`,
+      `Gemini real OK (${process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"}): respuesta JSON validada y preguntas de seguimiento. Clave oculta. No se consultó Google Maps.`,
     );
   } catch (error) {
     console.error(geminiFailureNotice(error));

@@ -20,10 +20,6 @@ if (
     console.log(
       `Google Places responde: ${result.total} museos dentro de 3 km de Pasto. Claves ocultas. No se solicitaron fotos ni rutas.`,
     );
-    if (process.env.NEXT_PUBLIC_PLACES_PROVIDER !== "google")
-      console.log(
-        "Para activar Google en la app: NEXT_PUBLIC_PLACES_PROVIDER=google; después reinicia o vuelve a desplegar.",
-      );
   } catch (error) {
     console.error(
       error instanceof Error

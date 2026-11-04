@@ -1,6 +1,6 @@
-import { isGooglePlace, type Place } from "@/lib/places";
+import { type Place } from "@/lib/places";
 export function GoogleAttribution({ places }: { places: Place[] }) {
-  const google = places.filter(isGooglePlace);
+  const google = places;
   if (!google.length) return null;
   const providers = [
     ...new Map(

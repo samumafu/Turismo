@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Viewport } from "./place-map";
-import { usesGoogleMaps } from "@/lib/maps-config";
 import { GoogleAttribution } from "./google-attribution";
 import { PlacePhoto } from "./place-photo";
 const PlaceMap = dynamic(() => import("./place-map"), {
@@ -84,29 +83,49 @@ export function DiscoveryExplorer({
       ),
     [],
   );
-  async function search(next: SearchSpec = spec, offset = 0, input = text) {
+  async function search(
+    next: SearchSpec = spec,
+    pageToken?: string,
+    input = text,
+  ) {
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
     setBusy(true);
-    setSelected([]);
+    if (!pageToken) {
+      setSelected([]);
+      setResult(null);
+    }
     setError(null);
-    setResult(null);
     try {
       const response = await fetch("/api/places/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input, spec: next, offset }),
+        body: JSON.stringify({ text: input, spec: next, pageToken }),
         signal: AbortSignal.any([current.signal, AbortSignal.timeout(42000)]),
       });
       const body = await response.json();
       if (!response.ok)
-        throw new Error(body.error ?? "No se pudo consultar OpenStreetMap.");
+        throw new Error(body.error ?? "No se pudo consultar Google Maps.");
       const data = searchResponseSchema.parse(body);
       if (current.signal.aborted) return;
-      setResult(data);
+      const places =
+        pageToken && result
+          ? [
+              ...new Map(
+                [...result.places, ...data.places].map((p) => [p.id, p]),
+              ).values(),
+            ].slice(0, 60)
+          : data.places;
+      const combined = {
+        ...data,
+        places,
+        total: places.length,
+        nextPageToken: places.length >= 60 ? null : data.nextPageToken,
+      };
+      setResult(combined);
       setSpec(data.spec);
-      onResults(data);
+      onResults(combined);
       const url = new URL(window.location.href);
       url.search = new URLSearchParams({
         zona: data.spec.zone,
@@ -142,9 +161,8 @@ export function DiscoveryExplorer({
       <div className="discovery-intro">
         <h2 id="discovery-title">Encuentra tu próximo lugar</h2>
         <p>
-          {usesGoogleMaps()
-            ? "Busca lugares en Google Maps por zona, nombre o categoría. Cada búsqueda consulta hasta 20 coincidencias; las fotos se cargan al pedirlas."
-            : "Busca en los datos abiertos de OpenStreetMap. Explora por zona, nombre o categoría; cada consulta carga una página de hasta 50 lugares."}
+          Explora lugares por zona, nombre o categoría. Puedes cargar más
+          resultados y abrir las fotos de los lugares que te interesen.
         </p>
       </div>
       <form className="discovery-form" onSubmit={submit}>
@@ -259,8 +277,7 @@ export function DiscoveryExplorer({
       ) : null}
       {busy ? (
         <p role="status" className="discovery-status">
-          Consultando {usesGoogleMaps() ? "Google Maps" : "OpenStreetMap"} por
-          zona y categoría…
+          Consultando Google Maps por zona y categoría…
         </p>
       ) : null}
       {result?.notice ? (
@@ -273,22 +290,9 @@ export function DiscoveryExplorer({
           <div className="discovery-results-heading" aria-live="polite">
             <strong>
               {result
-                ? `${result.total}${result.truncated ? "+" : ""} resultados en esta consulta`
+                ? `${result.total} lugares encontrados`
                 : "Busca para descubrir lugares"}
             </strong>
-            {result ? (
-              <span>
-                {result.source === "google"
-                  ? "Google Maps"
-                  : result.source === "overpass"
-                    ? "Consulta OSM"
-                    : result.source === "photon"
-                      ? "Índice Photon / OpenStreetMap"
-                      : result.source === "stale-cache"
-                        ? "Caché temporal anterior"
-                        : "Caché temporal OSM"}
-              </span>
-            ) : null}
           </div>
           <GoogleAttribution places={result?.places ?? []} />
           {result?.places.length ? (
@@ -303,32 +307,14 @@ export function DiscoveryExplorer({
                         <h3>{place.name}</h3>
                       </div>
                     </div>
-                    <p>
-                      {place.region}
-                      {place.cuisine
-                        ? ` · Cocina declarada en OSM: ${place.cuisine}`
-                        : ""}
-                    </p>
+                    <p>{place.region}</p>
                     <details>
                       <summary>Datos y procedencia</summary>
                       <p>{place.description}</p>
                       <p>{place.note}</p>
                       <p>
-                        Horarios{" "}
-                        {place.id.startsWith("google:")
-                          ? "(consulta la ficha de Google Maps)"
-                          : "declarados en OSM"}
-                        : {place.openingHours ?? "sin datos"}. Tarifas y
-                        disponibilidad por confirmar.
-                      </p>
-                      <p>
-                        Coordenadas: {place.coordinates.join(", ")}
-                        {place.coordinateKind === "center"
-                          ? " (centro del objeto, no entrada)"
-                          : place.coordinateKind === "place"
-                            ? " (ubicación de Google Maps; confirma la entrada)"
-                            : " (nodo OSM)"}
-                        .
+                        Consulta horarios, tarifas y disponibilidad en la ficha
+                        del lugar.
                       </p>
                       <a
                         href={place.sources[0].url}
@@ -391,40 +377,14 @@ export function DiscoveryExplorer({
           ) : (
             <Skeleton className="h-48 w-full" />
           )}
-          {result && result.source !== "google" ? (
-            <div className="discovery-pagination">
-              <Button
-                variant="outline"
-                disabled={
-                  busy ||
-                  !result ||
-                  (result.nextOffset === null && result.places.length === 0) ||
-                  (result.nextOffset ?? result.total) - result.places.length <=
-                    0
-                }
-                onClick={() =>
-                  search(
-                    result.spec,
-                    Math.max(
-                      0,
-                      (result.nextOffset ?? result.total) -
-                        result.places.length -
-                        50,
-                    ),
-                    "",
-                  )
-                }
-              >
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                disabled={busy || result.nextOffset === null}
-                onClick={() => search(result.spec, result.nextOffset!, "")}
-              >
-                Siguiente página
-              </Button>
-            </div>
+          {result?.nextPageToken ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => search(result.spec, result.nextPageToken!, "")}
+            >
+              Ver más lugares
+            </Button>
           ) : null}
         </div>
         <aside className="discovery-map-panel">
@@ -451,7 +411,7 @@ export function DiscoveryExplorer({
                     radius: view.radius,
                     name: "",
                   },
-                  0,
+                  undefined,
                   "",
                 );
               }

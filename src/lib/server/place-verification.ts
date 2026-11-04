@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { isGooglePlace, placeSchema, type Place } from "@/lib/places";
+import { placeSchema, type Place } from "@/lib/places";
 
 // A configured server secret works across Vercel functions. The local fallback only lasts for this process.
 const ephemeral = randomBytes(32).toString("hex");
@@ -21,12 +21,7 @@ export function signPlace(place: Place): Place {
 }
 export function isVerifiedPlace(place: Place) {
   const age = Date.now() - Date.parse(place.observedAt);
-  if (
-    !place.verification ||
-    age < -60000 ||
-    age > (isGooglePlace(place) ? 30 * 60000 : 24 * 3600000)
-  )
-    return false;
+  if (!place.verification || age < -60000 || age > 30 * 60000) return false;
   const expected = Buffer.from(signature(place));
   const actual = Buffer.from(place.verification);
   return expected.length === actual.length && timingSafeEqual(expected, actual);

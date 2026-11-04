@@ -1,17 +1,23 @@
-// Synthetic HTTP fixtures for tests only. Never imported by the application.
-import { normalizeResult } from "../src/lib/osm";
+// Synthetic responses only. Never imported by the application.
+import { normalizeGooglePlace } from "../src/lib/server/google-maps";
 export const rawFixture = (size = 4) => ({
-  elements: Array.from({ length: size }, (_, i) => ({
-    type: "node",
-    id: 910000001 + i,
-    lat: 1.2146 + (i % 30) * 0.0001,
-    lon: -77.2783 + Math.floor(i / 30) * 0.0001,
-    tags: {
-      name: `Lugar de prueba ${i + 1}`,
-      tourism: "museum",
-      "addr:city": "Pasto",
+  places: Array.from({ length: size }, (_, i) => ({
+    id: "TestPlace" + (910000001 + i),
+    displayName: { text: `Lugar de prueba ${i + 1}` },
+    location: {
+      latitude: 1.2146 + (i % 30) * 0.0001,
+      longitude: -77.2783 + Math.floor(i / 30) * 0.0001,
     },
+    types: ["museum"],
+    businessStatus: "OPERATIONAL",
+    formattedAddress: "Pasto, Nariño, Colombia",
+    addressComponents: [
+      { shortText: "CO", longText: "Colombia", types: ["country"] },
+      { longText: "Nariño", types: ["administrative_area_level_1"] },
+    ],
   })),
 });
 export const fixturePlaces = () =>
-  normalizeResult(rawFixture(), new Date().toISOString()).places;
+  rawFixture().places.map((p) =>
+    normalizeGooglePlace(p, new Date().toISOString())!,
+  );

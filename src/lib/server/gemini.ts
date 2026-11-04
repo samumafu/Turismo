@@ -129,7 +129,7 @@ Si ya hay acceptedIds y solicita ajustar horarios, duración o días, puedes dev
 action=explore cuando pide buscar, ver o conocer lugares, restaurantes, naturaleza o un nombre sin pedir agenda. NO exijas presupuesto, acompañantes, días ni transporte para explorar. Ejemplos: "restaurantes típicos en Ipiales", "lugares naturales alrededor de La Cocha", "Museo Taminango". Si hay itinerario previo y pide una búsqueda independiente, explore; si pide reemplazar o añadir paradas, plan.
 Separa siempre el destino del punto de referencia: "una cafetería cerca de la Universidad Cooperativa de Colombia campus Pasto" es explore, categories=["cafeterias"], name="", near="Universidad Cooperativa de Colombia Pasto", radio=1500 m. near es el nombre del punto alrededor del cual buscar, nunca coordenadas; el servidor lo geocodifica. No necesitas GPS ni perfil para esta búsqueda. Si no hay referencia nueva conserva previous.near salvo cambio de zona. No uses el nombre de la universidad como nombre de cafetería.
 action=plan organiza o modifica las visitas ya aceptadas; explorar sirve para buscar opciones nuevas. Actualiza el perfil conservando los datos conocidos y deja como null lo desconocido. Un saludo o una solicitud ambigua usa clarify. Para elegir visitas y crear un recorrido sencillo no exijas presupuesto, viajeros ni transporte. Puedes preguntar por datos concretos cuando sean necesarios para responder a lo que pide. Mensaje breve; no inventes resultados antes de consultar el buscador de lugares.
-Elige solo una zona y hasta 3 categorías permitidas. Conserva la búsqueda anterior al cambiar presupuesto o duración. Si cambia zona/categoría limpia el nombre anterior, salvo que solicite un nombre concreto. Los restaurantes típicos usan restaurantes y regionalFood=true. Nombres concretos en name, sin adornos; intereses generales con name vacío. Radio 500-25000 m, predeterminado previo. No inventes coordenadas ni Overpass QL.`,
+Elige solo una zona y hasta 3 categorías permitidas. Conserva la búsqueda anterior al cambiar presupuesto o duración. Si cambia zona/categoría limpia el nombre anterior, salvo que solicite un nombre concreto. Los restaurantes típicos usan restaurantes y regionalFood=true. Nombres concretos en name, sin adornos; intereses generales con name vacío. Radio 500-25000 m, predeterminado previo. No inventes coordenadas.`,
     {
       zones: searchZones,
       allowedCategories: categoryKeys,
@@ -200,10 +200,13 @@ Actualiza el perfil conservando datos anteriores. Pregunta si faltan días (1 a 
 Elige hasta 5 paradas/día entre 07:00 y 19:00 sin solapamientos. Agrupa lugares cercanos: máximo 3,5 km desde la primera parada si van a pie o 25 km si usan transporte. Esto no demuestra transitabilidad ni tiempo real: pide confirmar rutas y accesos. Usa exactamente profile.days jornadas secuenciales. No incluyas availability=restringido ni ascensos a volcanes, ni ingreso a Corota.
 Las horas de visita son orientativas, no horarios de apertura. Los precios son desconocidos. No escribas cifras de costos ni garantías de ajuste al presupuesto. Las provisiones se calculan en la interfaz. No inventes traslados ni distancias. Al editar, conserva las visitas no afectadas cuando sigan entre los candidatos. Devuelve solo el JSON.`,
     {
-      candidates: candidates.map(({ image, ...p }) => {
-        void image;
-        return p;
-      }),
+      candidates: candidates.map(
+        ({ googlePhoto, googleAttributions, ...p }) => {
+          void googlePhoto;
+          void googleAttributions;
+          return p;
+        },
+      ),
       messages: input.messages,
       previousProfile: input.profile,
       previousItinerary: input.itinerary,

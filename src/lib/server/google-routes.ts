@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { isGooglePlace, type Place } from "@/lib/places";
+import { type Place } from "@/lib/places";
 import { googleRequest } from "./google-maps";
 import { HttpError, rateLimit } from "./guard";
 
@@ -58,14 +58,7 @@ export async function googleRoute(
   signal?: AbortSignal,
 ) {
   rateLimit("google:routes", 15, 60000);
-  const waypoint = (p: Place) =>
-    isGooglePlace(p)
-      ? { placeId: p.id.slice(7) }
-      : {
-          location: {
-            latLng: { latitude: p.coordinates[0], longitude: p.coordinates[1] },
-          },
-        };
+  const waypoint = (p: Place) => ({ placeId: p.id.slice(7) });
   const points = [
     ...(origin
       ? [

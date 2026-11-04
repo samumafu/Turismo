@@ -1,91 +1,77 @@
-# Configurar Google Maps
+# Google Maps: configuración y funcionamiento
 
-Implementado: mapa interactivo, búsqueda por zona/nombre/categoría o referencia, fotos bajo demanda, rutas reales en carro y a pie desde GPS o un origen confirmado, e itinerarios con las visitas aceptadas. El transporte público conserva el enlace externo. Gemini y las cuentas siguen siendo independientes del mapa.
+La aplicación utiliza Google Maps como único proveedor de lugares, fotografías y rutas. Gemini interpreta la conversación y Supabase gestiona las cuentas y los viajes guardados; son integraciones independientes.
 
-## Proyecto y APIs
+## APIs y claves
 
-1. Selecciona o crea un proyecto en Google Cloud Console. Es preferible separar Maps del proyecto gratuito de Gemini: habilitar facturación para Maps no cambiará así la facturación de Gemini.
-2. Vincula una cuenta de facturación. Si eres elegible, usa la prueba gratuita sin convertirla en cuenta paga. Revisa estado y crédito en **Facturación**.
-3. En **APIs y servicios → Biblioteca**, habilita **Maps JavaScript API**, **Places API (New)** y **Routes API**. No necesitas las APIs Legacy, Geocoding ni Route Matrix.
+En Google Cloud Console, selecciona el proyecto y habilita **Maps JavaScript API**, **Places API (New)** y **Routes API**. No hacen falta las APIs Legacy, Geocoding ni Route Matrix.
 
-## Dos claves
+Crea dos claves en **APIs y servicios → Credenciales**:
 
-En **APIs y servicios → Credenciales → Crear credenciales → Clave de API**, crea:
+- **Navegador**: restringida a sitios web y exclusivamente a Maps JavaScript API. Autoriza `http://localhost:3000/*`, `http://127.0.0.1:3000/*` y el dominio publicado exacto.
+- **Servidor**: restringida exclusivamente a Places API (New) y Routes API. No uses restricciones de referentes HTTP. Si tu alojamiento tiene salida por IP fija, puedes restringirla a esa IP; Vercel normalmente tiene salida variable.
 
-**Clave del navegador** (`turismo-maps-browser`):
-
-- Restricciones de aplicaciones: **Sitios web / referentes HTTP**.
-- Autoriza `http://localhost:3000/*`, `http://127.0.0.1:3000/*` y el dominio real publicado, por ejemplo `https://tu-sitio.vercel.app/*`. Agrega otros puertos solo si los usas. No autorices todos los dominios de Vercel.
-- Restricciones de API: únicamente **Maps JavaScript API**.
-- Variable: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`. Es visible en el navegador por diseño; restringirla es necesario.
-
-**Clave del servidor** (`turismo-maps-server`):
-
-- Restricciones de API: únicamente **Places API (New)** y **Routes API**.
-- No apliques restricciones de sitios web: las consultas salen del servidor. Restringe por IP si tienes salida fija; Vercel normalmente tiene IP de salida variable sin configuración específica.
-- Variable secreta: `GOOGLE_MAPS_SERVER_API_KEY`. Nunca la escribas en una variable `NEXT_PUBLIC_`, Git, capturas o mensajes.
-
-## Variables y prueba
-
-En `.env.local`, junto a `package.json`, completa:
+Configura en `.env.local`:
 
 ```dotenv
-NEXT_PUBLIC_PLACES_PROVIDER=google
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=tu_clave_restringida_del_navegador
-GOOGLE_MAPS_SERVER_API_KEY=tu_clave_secreta_del_servidor
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=clave_del_navegador
+GOOGLE_MAPS_SERVER_API_KEY=clave_secreta_del_servidor
+# Opcional: ID de mapa JavaScript. El prototipo usa DEMO_MAP_ID por defecto.
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
 ```
 
-Conserva las claves existentes de Gemini y Supabase. No reutilices la clave de Gemini para Maps. Opcionalmente configura un ID de mapa JavaScript con `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID`; el prototipo utiliza por defecto el ID oficial `DEMO_MAP_ID`.
+No se necesita selector de proveedor. Conserva tus claves de Gemini y Supabase. La clave del servidor nunca debe aparecer en variables públicas, capturas, Git o mensajes.
 
-Reinicia desde esta carpeta:
+Reinicia `npm run dev`. En Vercel agrega las mismas variables y vuelve a desplegar; las variables públicas se incorporan al compilar.
 
-```powershell
-npm run dev
-```
+## Lugares, fotos y rutas
 
-En Vercel agrega las tres variables en **Settings → Environment Variables** y vuelve a desplegar. Las variables públicas se incorporan al compilar; cambiar variables sin desplegar no actualiza el mapa. Autoriza el dominio publicado en la clave del navegador.
+Las búsquedas usan Text Search de Places API (New). Cada página solicita hasta 20 registros. **Ver más lugares** consulta la página siguiente únicamente cuando lo pides, hasta 60 resultados por búsqueda si Google los proporciona. Cambiar zona, categoría, radio o nombre inicia una búsqueda nueva. Los resultados se filtran por Nariño, Colombia, radio e intereses solicitados; por eso una página puede mostrar menos de 20.
 
-Este comando hace **una búsqueda real**, sin solicitar fotos ni rutas:
+Se muestran todas las opciones recibidas, sin el antiguo recorte visual de tres por categoría. Cada lugar permite abrir su foto. Las fotografías se solicitan individualmente con sus créditos; algunos lugares no tienen imágenes disponibles. No hay descarga automática de galerías ni consultas periódicas al mover el mapa.
+
+El itinerario contiene únicamente visitas aceptadas, con hasta cinco paradas por jornada. Google calcula rutas reales en carro o a pie desde el GPS o un origen confirmado. El transporte público conserva el enlace externo. Las horas de la agenda son orientativas; la duración y distancia de la ruta provienen de Google.
+
+Los lugares no se guardan como catálogo. Los viajes guardados y sus descargas conservan identificadores, elecciones y agenda. Al abrirlos, se vuelven a consultar las fichas. Las fotografías y las rutas no se almacenan en caché del servidor. Los registros firmados tienen una vigencia de 30 minutos para evitar consultas repetidas durante la sesión.
+
+## Verificación
+
+Una búsqueda real, sin fotos ni rutas:
 
 ```powershell
 npm run check:maps
 ```
 
-Abre `/planificar`, busca un museo o cafetería en Pasto, añade una visita, pulsa **Ver foto del lugar** y prueba la ruta con GPS. Comprueba las métricas de las tres APIs en la consola.
+Para probar el recorrido completo, abre `/planificar`, busca lugares, pulsa **Ver más lugares**, abre una foto y añade visitas al itinerario. Usa el GPS o confirma un punto de partida y elige carro o caminata. Comprueba las métricas de las APIs en Cloud Console.
 
-## Consumo y cuotas
+## Uso gratuito y cuotas
 
-Los USD 200 mensuales recurrentes fueron sustituidos por cupos gratuitos por SKU el 1 de marzo de 2025. Referencia comprobada el 4 de noviembre de 2026:
+Los USD 200 mensuales recurrentes fueron sustituidos por cupos gratuitos por SKU desde el 1 de marzo de 2025. Referencia comprobada el 4 de noviembre de 2026:
 
-| Operación usada           | Cupo gratuito mensual publicado |
+| Operación utilizada       | Cupo gratuito mensual publicado |
 | ------------------------- | ------------------------------: |
 | Mapa dinámico             |                   10.000 cargas |
-| Nearby Search Pro         |               5.000 solicitudes |
 | Text Search Pro           |               5.000 solicitudes |
 | Place Details Pro         |               5.000 solicitudes |
 | Place Photos              |               1.000 solicitudes |
 | Compute Routes Essentials |              10.000 solicitudes |
 
-Son cupos independientes y agregados por cuenta de facturación, no por usuario. Pro es el nombre de un SKU; no implica contratar una suscripción. La app solicita nombre, dirección, coordenadas, categoría, estado y referencias de fotos. No solicita automáticamente reseñas, valoraciones, horarios ni teléfonos, que activarían otros SKUs; conserva un enlace a la ficha de Google Maps para consultarlos.
+Pro es el nombre de un SKU, no una suscripción contratada por la aplicación. Cada página adicional, foto, ficha reabierta y nueva ruta consume su respectiva solicitud. Los cupos se agregan por cuenta de facturación.
 
-Cada búsqueda hace una solicitud. Resolver una referencia puede requerir otra búsqueda. Cada foto se pide al pulsar el botón. Abrir un viaje guardado requiere una consulta de detalles por lugar Google elegido. Cambiar origen, destino o modo solicita otra ruta, tras una espera breve para agrupar cambios rápidos. El mapa carga al mostrarlo. No hay consultas periódicas, búsquedas al mover el mapa ni descarga de galerías.
+La app pide nombre, dirección, coordenadas, categorías, estado y referencias de fotos. No solicita automáticamente reseñas, valoraciones, horarios o teléfonos, que activarían otros SKUs. Esa información se puede consultar en el enlace a la ficha del lugar.
 
-La app limita por instancia a 10 búsquedas/minuto, 10 fotos/minuto, 15 rutas/minuto y 30 fichas/minuto, además de sus límites por cliente. Estas protecciones están en memoria: no son contadores mensuales compartidos ni garantizan costo cero.
+La app limita por instancia a 10 búsquedas, 10 fotos, 15 rutas y 30 fichas por minuto, además de sus límites por cliente. Estos contadores están en memoria y no son topes mensuales compartidos.
 
-En **Google Maps Platform → Cuotas**, reduce los límites disponibles. Si existe cuota diaria, 20 búsquedas, 20 fotos y 20 rutas por día son un punto de partida conservador para este grupo pequeño; contempla también las fichas al reabrir viajes. Si una API solo ofrece límites por minuto, estos no equivalen a un tope mensual. La consola es la autoridad sobre las cuotas disponibles.
+Configura cuotas conservadoras y alertas en Cloud Console. Si la consola ofrece cuota diaria, 20 búsquedas, 20 fotos y 20 rutas al día son un punto de partida para un grupo pequeño; contempla también las fichas reabiertas. Una cuota por minuto no equivale a un tope mensual. Las alertas de presupuesto no detienen cobros.
 
-Configura presupuesto y alertas en **Facturación → Presupuestos y alertas**. Una alerta no detiene llamadas ni cobros. Durante una prueba elegible, mantén la cuenta como **Free Trial** sin actualizarla a paga: al agotarse la prueba se interrumpe el servicio. En una cuenta paga, los excesos pueden cobrarse. Al terminar el mes puedes deshabilitar las APIs o volver a `NEXT_PUBLIC_PLACES_PROVIDER=osm` y desplegar otra vez.
+Si eres elegible para la prueba gratuita, puedes mantener la cuenta como Free Trial sin convertirla en paga: al agotarse la prueba se interrumpe el servicio. En una cuenta paga, exceder los cupos puede generar cobros. Para dejar de usar Maps al terminar el mes, deshabilita las APIs o el despliegue.
 
-## Datos y errores
+## Errores habituales
 
-Los resultados de Google no se guardan en caché del servidor ni se persisten como catálogo. Permanecen en la sesión activa; las fichas firmadas se vuelven a consultar tras 30 minutos. Los viajes guardados y las descargas conservan IDs, elecciones y agenda; los datos de los lugares se recuperan de nuevo al abrirlos. Las fotos no se descargan al servidor y muestran sus autores y atribución.
-
-El modo OSM y su caché siguen disponibles con `NEXT_PUBLIC_PLACES_PROVIDER=osm`. Un error de Google no cambia automáticamente a Leaflet: el contenido Google se muestra sobre un mapa Google. Los errores de configuración/cuota/conexión son visibles; no se sustituyen con lugares inventados.
-
-- **RefererNotAllowedMapError**: revisa dominio y puerto autorizados en la clave del navegador.
+- **RefererNotAllowedMapError**: comprueba el dominio y puerto de la clave del navegador.
 - **ApiNotActivatedMapError**: habilita Maps JavaScript API.
-- **BillingNotEnabledMapError**: revisa facturación del proyecto.
-- **Búsquedas o rutas rechazadas**: revisa la clave del servidor, Places API (New), Routes API y sus restricciones.
-- **Cuota alcanzada**: comprueba el consumo; no aumentes cuotas sin revisar costos.
+- **BillingNotEnabledMapError**: revisa la facturación del proyecto.
+- **Búsquedas/rutas rechazadas**: comprueba la clave del servidor, Places API (New), Routes API y sus restricciones.
+- **Cuota alcanzada**: revisa consumo y límites antes de aumentarlos.
 
-Fuentes: [precios](https://developers.google.com/maps/billing-and-pricing/pricing), [cambio de 2025](https://developers.google.com/maps/billing-and-pricing/overview), [prueba gratuita](https://cloud.google.com/signup-faqs), [control de costos](https://developers.google.com/maps/billing-and-pricing/manage-costs), [políticas de Places](https://developers.google.com/maps/documentation/places/web-service/policies).
+Fuentes: [precios](https://developers.google.com/maps/billing-and-pricing/pricing), [paginación](https://developers.google.com/maps/documentation/places/web-service/text-search), [cambios de 2025](https://developers.google.com/maps/billing-and-pricing/overview), [prueba gratuita](https://cloud.google.com/signup-faqs), [control de costos](https://developers.google.com/maps/billing-and-pricing/manage-costs), [políticas de Places](https://developers.google.com/maps/documentation/places/web-service/policies).

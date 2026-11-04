@@ -245,6 +245,7 @@ export async function POST(request: Request) {
         total: found.total,
         source: found.source,
         observedAt: found.observedAt,
+        nextPageToken: found.nextPageToken,
       },
     });
   } catch (error) {

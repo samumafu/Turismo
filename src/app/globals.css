@@ -32,7 +32,7 @@
   --radius-2xl: 12px;
 }
 
-/* Dynamic, bounded OSM exploration. */
+/* Map exploration and route controls. */
 .map-location-actions {
   display: flex;
   flex-wrap: wrap;
@@ -53,15 +53,6 @@
 .map-route-fields select {
   width: 100%;
   min-width: 0;
-}
-.user-location-marker span {
-  display: block;
-  width: 22px;
-  height: 22px;
-  background: #17678a;
-  border: 4px solid white;
-  border-radius: 50%;
-  outline: 2px solid #17678a;
 }
 .advanced-search {
   padding-block: 24px;
@@ -216,19 +207,6 @@
   overflow: hidden;
   position: relative;
   z-index: 0;
-}
-.discovery-cluster span {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border: 3px solid var(--card);
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--foreground);
-  font:
-    600 13px var(--font-body),
-    sans-serif;
 }
 .map-pick-button {
   display: block;
@@ -1012,33 +990,6 @@
   font-size: 0.8rem;
   margin-block: 0.5rem;
 }
-.leaflet-map {
-  height: 100%;
-  width: 100%;
-  background: var(--secondary);
-  font-family: var(--font-body), sans-serif;
-}
-.numbered-marker {
-  background: transparent;
-}
-.numbered-marker > span {
-  display: grid;
-  place-items: center;
-  background: var(--foreground);
-  color: var(--photo-ink);
-  width: 32px;
-  height: 32px;
-  border: 2px solid white;
-  border-radius: 50% 50% 50% 3px;
-  transform: rotate(-45deg);
-  font:
-    600 12px var(--font-body),
-    sans-serif;
-}
-.numbered-marker b {
-  transform: rotate(45deg);
-  font-weight: 600;
-}
 .mobile-plan-link {
   display: none;
 }
@@ -1394,10 +1345,6 @@
   flex-wrap: wrap;
   align-items: center;
   margin-block: 14px;
-}
-.accepted-marker span {
-  background: var(--primary);
-  color: var(--primary-foreground);
 }
 @media (max-width: 600px) {
   .place-options {

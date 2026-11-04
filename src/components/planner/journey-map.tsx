@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Circle, Marker, Popup, Polyline, useMap } from "react-leaflet";
-import { divIcon, latLngBounds } from "leaflet";
 import { z } from "zod";
 import {
   ArrowUpRight,
@@ -12,10 +10,8 @@ import {
   X,
 } from "lucide-react";
 import { directionsLink, searchZones, type Place } from "@/lib/places";
-import { usesGoogleMaps } from "@/lib/maps-config";
 import PlaceMap from "@/components/discovery/place-map";
 import { usePlanner } from "./provider";
-import type { UserPosition } from "./use-user-location";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -33,84 +29,6 @@ const routeSchema = z.object({
 });
 type RoadRoute = z.infer<typeof routeSchema>;
 type Mode = "driving" | "walking" | "transit";
-
-function RouteOverlay({
-  position,
-  stops,
-  route,
-  originLabel,
-}: {
-  position: UserPosition | null;
-  stops: Place[];
-  route?: RoadRoute;
-  originLabel: string;
-}) {
-  const map = useMap();
-  const points = useMemo(
-    () =>
-      route
-        ? route.geometry.coordinates.map(
-            ([lng, lat]) => [lat, lng] as [number, number],
-          )
-        : [
-            ...(position ? [position.coordinates] : []),
-            ...stops.map((p) => p.coordinates),
-          ],
-    [position, stops, route],
-  );
-  useEffect(() => {
-    if (points.length === 1) map.setView(points[0], 15, { animate: false });
-    else if (points.length)
-      map.fitBounds(latLngBounds(points), {
-        padding: [35, 35],
-        maxZoom: 15,
-        animate: false,
-      });
-    map.invalidateSize();
-  }, [map, points]);
-  return (
-    <>
-      {position ? (
-        <>
-          <Circle
-            center={position.coordinates}
-            radius={position.accuracy}
-            pathOptions={{ color: "#17678a", weight: 1, fillOpacity: 0.08 }}
-            interactive={false}
-          />
-          <Marker
-            position={position.coordinates}
-            title={originLabel}
-            alt={originLabel}
-            icon={divIcon({
-              className: "user-location-marker",
-              html: "<span></span>",
-              iconSize: [22, 22],
-              iconAnchor: [11, 11],
-            })}
-          >
-            <Popup>
-              <strong>{originLabel}</strong>
-              <p>
-                {position.accuracy
-                  ? "Precisión del dispositivo: ±" +
-                    Math.round(position.accuracy) +
-                    " m."
-                  : "Punto de partida confirmado por ti."}
-              </p>
-            </Popup>
-          </Marker>
-        </>
-      ) : null}
-      {route ? (
-        <Polyline
-          positions={points}
-          pathOptions={{ color: "#17678a", weight: 5, opacity: 0.9 }}
-        />
-      ) : null}
-    </>
-  );
-}
 
 function RoutingMap({
   places,
@@ -285,14 +203,7 @@ function RoutingMap({
         position={position}
         originLabel={originLabel}
         routeCoordinates={current?.data?.geometry.coordinates}
-      >
-        <RouteOverlay
-          position={position}
-          stops={position ? targets : places}
-          route={current?.data}
-          originLabel={originLabel}
-        />
-      </PlaceMap>
+      />
       {stops.length ? (
         <FieldGroup className="map-route-fields">
           <Field>
@@ -379,37 +290,9 @@ function RoutingMap({
           <AlertDescription>{current.error}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="map-attribution">
-        {usesGoogleMaps() ? (
-          <span>
-            Mapa y rutas: Google Maps · verifica el acceso antes de viajar.
-          </span>
-        ) : (
-          <>
-            <span>
-              Rutas:{" "}
-              <a
-                href="https://routing.openstreetmap.de/about.html"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                FOSSGIS / OSRM
-              </a>{" "}
-              · datos ©{" "}
-              <a href="https://www.openstreetmap.org/copyright">
-                OpenStreetMap, ODbL
-              </a>
-            </span>
-            <a
-              href="https://www.openstreetmap.org/fixthemap"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Reportar un problema del mapa
-            </a>
-          </>
-        )}
-      </div>
+      <p className="map-attribution" translate="no">
+        Google Maps
+      </p>
     </>
   );
 }

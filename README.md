@@ -1,33 +1,39 @@
 # Turismo Nariño · Turismo Inteligente Pasto
 
-Google Maps: integración opcional de mapa, lugares, fotos y rutas. Sigue [la guía de consola y cuotas](docs/google-maps.md). OpenStreetMap permanece disponible como modo alternativo.
-
-Aplicación Next.js App Router, TypeScript, Tailwind y shadcn/ui con búsqueda turística dinámica en **Google Maps / Places** o **OpenStreetMap / Overpass**, mapa según el proveedor y planificación con Gemini opcional.
-
-**No contiene un catálogo manual de lugares ni un respaldo de 14 destinos.** Los puntos se obtienen del proveedor al buscar. Las respuestas de OSM usan caché temporal; los datos de Google se conservan solo en la sesión activa. Los viajeros con cuenta pueden guardar su plan; para Google se guardan IDs y elecciones, consultando otra vez las fichas al abrirlo.
+Planificador turístico en Next.js, TypeScript, Tailwind y shadcn/ui. **Google Maps es el único proveedor de mapas, lugares, fotografías y rutas.** No hay un catálogo manual de destinos ni resultados de relleno.
 
 ## Ejecutar
 
-Node.js 22 o 24 y npm. Desde `turismo-inteligente-pasto`:
+Requiere Node.js 22 o 24 y npm. Desde esta carpeta:
 
 ```powershell
 npm install
 npm run dev
 ```
 
-Abre http://localhost:3000/planificar. Copia solo los comandos, sin `PS ...>`. No hace falta una clave para buscar o planificar por reglas, pero sí conexión a un proveedor de búsqueda OSM.
+Copia `.env.example` a `.env.local` y configura `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` y `GOOGLE_MAPS_SERVER_API_KEY`. Habilita Maps JavaScript API, Places API (New) y Routes API. Sigue [la guía de consola y cuotas](docs/google-maps.md). No se necesita un selector de proveedor.
 
-La experiencia principal está en `/planificar`; `/` representa el mismo planificador y procesa también los retornos de correo enviados al Site URL. La antigua página `/destinos` fue eliminada. Gemini decide si explorar, pedir información o planificar, y traduce la conversación a filtros permitidos y datos del viaje. Puedes cambiar zona, categoría, radio, presupuesto, días, acompañantes o transporte conversando. Buscar lugares no exige completar un itinerario.
+## Descubrimiento y planificación
 
-Los filtros manuales y la exploración del mapa se cargan únicamente al abrir **Búsqueda avanzada**. Allí puedes elegir zona, categoría y radio, paginar o pulsar **Buscar en esta zona del mapa**. No se consulta al escribir ni al arrastrar.
+El chat y la búsqueda avanzada consultan Google Places por zona, nombre, referencia y categorías. Se comprueban país, departamento y radio. Cada página contiene hasta 20 resultados y **Ver más lugares** carga otra página disponible, hasta 60 por búsqueda. Las fotos se abren a petición con sus autores y atribución de Google Maps.
 
-También puedes buscar sin GPS: «una cafetería cerca de la Universidad Cooperativa de Colombia campus Pasto». El servidor separa la categoría del punto de referencia, resuelve este último en Photon/OSM y busca alrededor de sus coordenadas (1,5 km por defecto, ajustable por chat). Si no lo encuentra o hay varias sedes, solicita precisar el lugar; no lo sustituye por el centro de la ciudad. Las referencias se consultan dinámicamente y se guardan en caché una hora, hasta 50, sin catálogo manual. El chat muestra nombres reales y distancias aproximadas en línea recta, distintas de una ruta transitable.
+Añade solo los destinos que quieras visitar; buscar opciones no los incorpora al itinerario. Google Routes devuelve la geometría, distancia y duración de las rutas en carro o a pie desde GPS o un origen confirmado. El transporte público abre Google Maps.
 
-En la búsqueda avanzada puedes aceptar hasta 5 lugares por selección (25 visitas en total). Los lugares encontrados se muestran en el mapa; **Itinerario contiene únicamente los aceptados**, conserva su orden y permite quitar o mover visitas. No exige presupuesto para organizar un recorrido sencillo. Las horas y duraciones son orientativas. Las propuestas guardadas por versiones anteriores no se convierten automáticamente en visitas aceptadas. Sin cuenta, el plan se mantiene solo en memoria durante la sesión. Con cuenta puedes guardar un viaje en Supabase y recuperarlo después. Al editar o calcular una ruta, el servidor resuelve los identificadores OSM y no confía en coordenadas de destinos enviadas por el navegador.
+Los horarios de agenda son orientativos. Tarifas, apertura y disponibilidad se confirman en la ficha del lugar. La app no inventa esos datos ni calcula rutas con líneas rectas.
+
+Los viajes guardados conservan IDs, elecciones y agenda; los datos de los lugares se vuelven a consultar al abrirlos. No se guardan fotos, fichas ni rutas de Google como catálogo del servidor.
+
+## Gemini opcional
+
+Configura `GEMINI_API_KEY` y `GEMINI_MODEL` para interpretar la conversación. Es preferible conservar Gemini en un proyecto separado si utilizas su nivel gratuito sin facturación. Sin clave o ante un fallo, la planificación por reglas sigue disponible usando los mismos lugares de Google Maps.
+
+```powershell
+npm run check:gemini
+```
 
 ## Cuentas y viaje guardado
 
-La aplicación funciona sin configuración adicional como invitado. Para activar cuentas y guardar un viaje por usuario:
+Una vez configurado Maps, la aplicación puede usarse como invitado. Para activar cuentas y guardar un viaje por usuario:
 
 1. Crea un proyecto **Free** en [Supabase](https://supabase.com/pricing) y ejecuta el archivo `supabase/schema.sql` en su SQL Editor. Sus políticas RLS restringen cada registro al dueño.
 2. Copia la URL del proyecto y su clave **publishable** (o anon) a `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`; reinicia Next.js. Configura las mismas variables en Vercel y vuelve a desplegar. Son valores públicos: nunca uses la clave `service_role` en el navegador.
@@ -40,127 +46,33 @@ Si el guardado devuelve `PGRST205` o «Could not find the table public.saved_jou
 
 Tras iniciar sesión, el viaje guardado se abre si la sesión está vacía. Si hay dos viajes (uno abierto y otro guardado), usa «Guardar viaje actual» o «Abrir viaje guardado» para elegir cuál conservar. Si aún no hay un registro guardado, el viaje abierto se guarda automáticamente. Después de guardar o abrir, los cambios se sincronizan automáticamente; la cuenta conserva un solo viaje. Durante el registro, una copia temporal en `sessionStorage` intenta conservar el viaje al confirmar el correo en la misma pestaña; si el navegador bloquea ese almacenamiento o abre otra pestaña, no está garantizado. El chat y la posición GPS no se guardan. La sesión de Supabase se conserva en el navegador hasta cerrar sesión.
 
-## Búsqueda, cobertura y límites
-
-- Endpoint `POST /api/places/search`, JSON validado; consulta por zona o centro del mapa, categoría, nombre y radio de **500 m a 25 km**.
-- La selección se intersecta con el área administrativa `ISO3166-2=CO-NAR`. Los centros iniciales de municipios son anclas aproximadas de búsqueda, **no una base de atractivos**. El mapa permite explorar otras zonas del departamento.
-- Categorías: atractivos, museos, monumentos/templos, parques, miradores, naturaleza, cascadas, restaurantes, cafeterías, alojamiento y cultura. Etiquetas OSM: tourism, historic, leisure, natural, waterway, amenity, landuse y cuisine.
-- Se consultan nodos, vías y relaciones. Se conserva `osm:<tipo>:<id>`. Los nodos tienen su coordenada; las vías/relaciones usan el centro cartográfico declarado por Overpass, que **no garantiza un acceso o entrada**.
-- Máximo **500 registros por consulta** en servidor; se muestra un aviso si se alcanza el límite. El navegador recibe **hasta 50 por página**. Para ampliar la cobertura se cambia de zona, radio o filtro: no se descarga todo Nariño ni se presentan 500 resultados como el total del departamento.
-- Marcadores agrupados con Leaflet.markercluster. Se muestran solo los de la página actual o los del itinerario, y los grupos fuera de la vista se retiran del render.
-- Duplicados: ID canónico y mismo nombre/categoría a menos de 40 m. No se fusionan indiscriminadamente lugares vecinos distintos.
-- “Típico” se filtra por `cuisine=regional/local/colombian`; si faltan etiquetas no se atribuye gastronomía local por suposición. OSM no garantiza cobertura, autenticidad, calidad, apertura ni actualización; ausencia de resultados no demuestra ausencia de lugares.
-- Horarios de OSM se muestran como datos declarados por la comunidad, por confirmar. Precios y disponibilidad permanecen desconocidos. Las duraciones/horas del itinerario son sugerencias, y el reparto del presupuesto es una provisión, no una cotización.
-
-## Proveedores gratuitos
-
-### Mapa principal, ubicación y rutas
-
-La vista inicial es **Mapa**; se eliminó la pestaña “Lugares”. En móviles el mapa aparece antes del chat. Los resultados del chat se muestran como marcadores y opciones para aceptar visitas. Las rutas recorren solo las visitas aceptadas, en orden.
-
-Pulsa **Usar mi ubicación y trazar ruta** y concede permiso. Se muestra tu posición con su precisión aproximada; si ya hay recomendaciones, se calcula un recorrido desde ese origen. También puedes acordar en el chat una dirección o referencia como salida. Photon la resuelve y la interfaz pide confirmar el punto antes de usarlo. Si es ambiguo, se pide precisar. No se toma automáticamente «cerca de» como origen de ruta. Para un itinerario puedes recorrer las paradas del día en orden o elegir un destino individual. Actualiza tu ubicación si te desplazas: no hay seguimiento GPS continuo.
-
-Las rutas en carro y a pie usan perfiles reales distintos de [FOSSGIS / OSRM](https://routing.openstreetmap.de/about.html), sin cuenta ni clave. Se respeta un máximo de una solicitud por segundo por instancia, sin reintentos automáticos, con cancelación y espera ante cambios rápidos. No se generan líneas rectas para sustituir rutas. Si falla el proveedor, se muestra el error y un enlace a Google Maps **con el origen GPS**. El transporte público usa ese enlace externo; no se simula su ruta como si fuera de carro.
-
-La ubicación solo vive en memoria del navegador, no se persiste con el itinerario ni se envía a Gemini. Se transmite al servidor y al enrutador al calcular un trayecto; el proveedor puede registrar solicitudes según su política. Las rutas con GPS no entran en la caché del servidor. El origen se valida como coordenada WGS84; las coordenadas de los destinos se obtienen exclusivamente resolviendo IDs OSM en el servidor. La red puede comenzar hasta 500 m del origen y terminar hasta 100 m de un marcador: confirma entradas, especialmente en centros de áreas naturales. Los destinos restringidos se rechazan.
-
-**Permisos:** geolocalización habilitada con `Permissions-Policy: geolocation=(self)`. Funciona en HTTPS (Vercel) o `localhost`; abrir `http://192.168...` en un teléfono normalmente no permite GPS. El navegador maneja el permiso y la precisión. Si deniegas el acceso, hay un aviso para reactivarlo y puedes seguir viendo el mapa.
-
-### Descubrimiento
-
-En el modo OSM, el proveedor predeterminado es [Overpass de Private.coffee](https://overpass.private.coffee/), que publica acceso gratuito sin registro y pide uso responsable. Es configurable en el servidor:
-
-```dotenv
-OVERPASS_API_URL=https://overpass.private.coffee/api/interpreter
-OVERPASS_FALLBACK_URL=disabled
-PHOTON_FALLBACK_ENABLED=true
-# Para identificar el proyecto al proveedor; Vercel también aporta VERCEL_URL.
-APP_PUBLIC_URL=https://tu-proyecto.vercel.app
-```
-
-El servidor envía un User-Agent identificable. Una consulta está limitada a 12 s de ejecución en Overpass, 15 s de red, 16 MiB de memoria remota declarada y 3 MB de respuesta descargada. Se espacia el inicio de solicitudes al menos 1,6 s y se limita a 15/minuto. Ante 401/403/406/429 se pausa y no se consulta ningún respaldo para evadir restricciones. Una caída de red o un 5xx abre un circuito de un minuto; se puede configurar una segunda instancia mediante `OVERPASS_FALLBACK_URL`, sin repetir solicitudes al mismo servidor. Solicitudes simultáneas idénticas comparten la consulta.
-
-Si Overpass está caído, las búsquedas interactivas usan [Photon de Komoot](https://photon.komoot.io/), otro índice de datos OSM sin clave ni cuenta. Se limita a 10 solicitudes/minuto, una por 1,5 s, 8 s de espera y 1 MB descargado. Solo acepta IDs OSM, categorías solicitadas y puntos dentro del radio y de Nariño según los datos del índice. Devuelve hasta 50 coincidencias y muestra un aviso de cobertura limitada; no ofrece extracción exhaustiva ni paginación adicional. Los precios, horarios y gastronomía regional siguen sin verificarse. El índice no contiene todas las etiquetas de acceso: confirma entradas. Puedes desactivarlo con `PHOTON_FALLBACK_ENABLED=false`. Los registros OSM consultados llevan firma del servidor durante 24 horas. Las rutas en otra función de Vercel pueden comprobar esa firma y usar los destinos sin volver a Overpass. Usa GEMINI_API_KEY o PLACE_SIGNING_SECRET (secreto aleatorio estable, solo servidor) en todas las funciones; sin ambos la firma solo es válida dentro del proceso actual. Un registro alterado o vencido requiere consultar de nuevo sus IDs.
-
-Caché de búsqueda: 15 minutos para Overpass y un minuto para Photon, hasta 40 consultas; registro temporal: hasta 2000 lugares y 24 horas. Si falla el proveedor y existe una respuesta para **esa misma búsqueda** de menos de 24 horas, se devuelve etiquetada como caché anterior. Sin datos consultados, se muestra un error con opción de reintento. **No se generan destinos de relleno.** La caché está en memoria, se puede perder al reiniciar y no está compartida entre instancias de Vercel; este prototipo está dimensionado para bajo tráfico universitario.
-
-Overpass es compartido y puede rechazar peticiones o estar inaccesible desde determinadas redes. Un 406/429 requiere esperar; un timeout puede ser del proveedor o de conectividad. Puedes cambiar `OVERPASS_API_URL` a una instancia compatible cuyos términos hayas revisado. No se configura ningún servicio de pago como fallback.
-
-Mapa: OpenStreetMap con [atribución y política de teselas](https://operations.osmfoundation.org/policies/tiles/), sin descarga offline ni precarga masiva. FOSSGIS / OSRM proporciona geometría real en carro o a pie desde la ubicación permitida del usuario. Si no se puede calcular un trayecto o se elige transporte público, se ofrece Google Maps mediante URLs externas sin API key. Nunca se representa una recta como ruta transitable.
-
-## Gemini opcional y costo cero
-
-En el modo OSM, Overpass sigue siendo el proveedor principal. Los resultados de respaldo de Photon caducan al minuto para que una búsqueda posterior vuelva a probar Overpass después de su pausa; los resultados de Overpass se conservan 15 minutos. La interfaz muestra un aviso breve cuando usa el respaldo. Si también aparece «Modo sin IA», Gemini no participó en esa solicitud: comprueba `GEMINI_API_KEY` en las variables del despliegue Vercel y vuelve a desplegar; `.env.local` solo configura el equipo local.
-
-Copia `.env.example` a `.env.local`, agrega una clave de un proyecto **Free tier sin facturación habilitada** y reinicia:
-
-```dotenv
-GEMINI_API_KEY=tu_clave_solo_en_servidor
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-La clave se coloca en **`turismo-inteligente-pasto/.env.local`**, junto a `package.json`, nunca dentro de `src/`. El archivo está excluido de Git. Si cambias la clave o el modelo, reinicia `npm run dev`.
-
-Para verificar la clave con **una llamada real**, sin depender de Overpass:
-
-```powershell
-npm run check:gemini
-```
-
-El comando verifica JSON estructurado y preguntas de seguimiento con el mismo SDK y validación del servidor. No imprime la clave, no inventa destinos y no sustituye la prueba de un itinerario completo con OSM. No forma parte de `npm test` ni del build, para evitar consumir cuota sin intención.
-
-Gemini interpreta búsquedas, elecciones explícitas y puntos de partida. Pedir opciones no acepta visitas: «hoy quiero un café y luego un parque» busca ambas categorías. La persona elige con los botones o indicando nombres concretos; el recorrido usa exclusivamente esos IDs. Una vez consultados los lugares, aceptar, quitar y reordenar no requiere otra consulta a Gemini ni a Overpass.
-
-SDK oficial `@google/genai`, Interactions API y JSON validado con Zod. Flujo:
-
-1. Gemini interpreta intención, perfil opcional, categorías, referencia, elecciones explícitas y dirección de salida mediante JSON validado. No genera coordenadas ni Overpass QL.
-2. El servidor consulta OSM/Photon, normaliza, deduplica y firma los registros. El navegador recibe hasta 50 resultados por página.
-3. El chat recibe nombres e IDs de hasta 75 registros consultados (resultados más visitas conservadas). Solo se aceptan IDs conocidos mencionados explícitamente; la IA no agrega sus recomendaciones por cuenta propia.
-4. El itinerario se construye con las visitas aceptadas y su orden. La búsqueda posterior conserva esa selección. La cuenta guarda también los IDs aceptados, sin requerir cambios a la tabla JSON de Supabase.
-
-Las etiquetas OSM y los mensajes se tratan como datos no confiables para instrucciones. «Ver foto del lugar» consulta Wikimedia Commons: utiliza los vínculos OSM a Commons/Wikidata o una entidad con nombre idéntico y coordenadas a menos de 200 m. Solo muestra imágenes CC BY, CC BY-SA, CC0 o dominio público con autor, licencia y enlace de origen; no sustituye una foto por otra cercana. La consulta es a petición, con caché de 24 horas y límites de frecuencia. Muchos cafés y negocios no tienen fotos libres: se ofrece Google Maps como enlace externo. El modo Google usa Places API y muestra sus fotos con atribucion, sin descargarlas al servidor; consulta docs/google-maps.md.
-
-Gemini: sin reintentos ni continuaciones automáticas, hasta 6 llamadas/minuto y 60 por ventana de 24 horas por instancia. Cada mensaje utiliza como máximo una llamada de interpretación. Añadir, quitar o reordenar con botones no consume Gemini. El código no puede comprobar la facturación de tu clave: conserva el proyecto de Google sin billing para que exceder la cuota no implique cobros. No se usa Google Places, grounding de pago ni pagos. Evita datos personales: el nivel gratuito de Google puede usar mensajes para mejorar productos. Condiciones y privacidad en `/fuentes`.
-
-### Modelo, versión y continuidad gratuita
-
-El modelo fijado es **`gemini-3.5-flash-lite`**, seleccionado por `GEMINI_MODEL` en `.env.local` y leído en `src/lib/server/gemini.ts`. El SDK que lo invoca es `@google/genai` (versión instalada en `package-lock.json`); SDK y modelo son versiones distintas. No se usa un alias `latest` ni se cambia automáticamente a otro modelo.
-
-La [tarifa oficial de Gemini 3.5 Flash-Lite](https://aistudio.google.com/docs/pricing#gemini-3.5-flash-lite) publica entrada y salida gratuitas en Free tier. Revisa que el proyecto asociado a tu clave figure como **Free** en [Google AI Studio](https://aistudio.google.com/api-keys) y no habilites una cuenta de facturación. Los límites internos no son una garantía de costo si activas billing. Las [cuotas reales](https://aistudio.google.com/rate-limit) dependen de tu proyecto y pueden ser menores que las del código. Ante cuota agotada se muestran avisos y se usan reglas sobre OSM; no se contrata una alternativa de pago. Google puede cambiar cuotas, precios o retirar modelos: no se puede garantizar disponibilidad o gratuidad indefinida. Si ocurre, revisa los términos, actualiza `GEMINI_MODEL` y comprueba con `npm run check:gemini`.
-
 ## Validación
 
 ```powershell
-npm run typecheck
-npm run lint
 npm test
+npm run lint
+npm run typecheck
 npm run build
 ```
 
-`npm test` usa HTTP simulado con datos sintéticos **solo en `tests/`**, nunca importados por la aplicación. Comprueba consultas acotadas, nombres escapados, paginación 125→50, normalización y fuentes, caché/coalescencia, fallos/429 sin respaldo inventado, interpretación Gemini y selección fundamentada.
-
-Con `next dev` activo, `npm run test:api` hace una consulta **real** a Overpass y genera un plan por reglas. No la ejecutes de manera repetitiva en un servicio público. Si falla la conexión, el test falla explícitamente; no sustituye esa verificación por un fixture.
-
-Para construir mientras `next dev` sigue activo:
+Comprobación explícita con una búsqueda real, sin fotos ni rutas:
 
 ```powershell
-$env:NEXT_BUILD_DIR='.next-production'
-npm run build
-Remove-Item Env:NEXT_BUILD_DIR
+npm run check:maps
 ```
+
+Con el servidor activo, `npm run test:api` realiza una búsqueda y genera un itinerario con un destino aceptado. Estas comprobaciones reales consumen solicitudes de Google.
 
 ## Vercel
 
-Importa el repositorio y selecciona `turismo-inteligente-pasto` como Root Directory, Next.js y Node 24. Usa `npm run build`, salida predeterminada y un plan Hobby elegible para uso académico no comercial. En Settings → Environment Variables agrega `GEMINI_API_KEY` con tu clave y `GEMINI_MODEL=gemini-3.5-flash-lite` para los entornos que usarás; vuelve a desplegar. `.env.local` permanece en tu computador y no se sube a Vercel. `OVERPASS_API_URL` y Gemini son variables de servidor; no antepongas `NEXT_PUBLIC_` a la clave. No configures `NEXT_BUILD_DIR` en Vercel. No se necesitan add-ons ni facturación de Google para el modo OSM sin IA.
+Configura las claves de Maps y las variables opcionales de Gemini/Supabase en Settings → Environment Variables y despliega de nuevo. Autoriza el dominio exacto en la clave del navegador. La clave del servidor se limita a Places API (New) y Routes API y nunca se expone al cliente.
 
 ## Archivos importantes
 
-- `src/lib/places.ts`: contratos de lugares/búsqueda y anclas geográficas.
-- `src/lib/osm.ts`: consultas permitidas, normalización y deduplicación.
-- `src/lib/server/discovery.ts`: Overpass, paginación y caché temporal.
-- `src/app/api/places/search/route.ts`: endpoint de descubrimiento.
-- `src/lib/server/gemini.ts` y `src/app/api/chat/route.ts`: interpretar → buscar → planificar.
-- `src/components/discovery/`: búsqueda, filtros, selección, mapa agrupado.
-- `src/components/planner/`: conversación y plan dinámico con registros OSM.
-
-La lista manual anterior y `src/data/places.json` se eliminaron. El viaje solo se guarda en la base de datos cuando se usa una cuenta; no hay persistencia local del itinerario.
+- `src/lib/server/google-maps.ts`: búsqueda paginada, referencias, fichas y fotografías.
+- `src/lib/server/google-routes.ts`: rutas reales y decodificación de geometría.
+- `src/lib/server/discovery.ts`: validación y firma de los lugares recibidos.
+- `src/components/discovery/`: mapa, búsqueda y fotos.
+- `src/components/planner/`: chat, elecciones, itinerario y cuentas.
+- `docs/google-maps.md`: claves, uso y cuotas.
+- `docs/BREVO_SUPABASE.md`: configuración de correo de las cuentas.

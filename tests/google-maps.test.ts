@@ -78,12 +78,10 @@ const request = (path: string, body: unknown) =>
 
 test("Google Maps integrates search, accepted itineraries, photos, routes and ID-only storage", async (t) => {
   const names = [
-    "NEXT_PUBLIC_PLACES_PROVIDER",
     "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
     "GOOGLE_MAPS_SERVER_API_KEY",
   ] as const;
   const previous = names.map((name) => process.env[name]);
-  process.env.NEXT_PUBLIC_PLACES_PROVIDER = "google";
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = "browser-test-key";
   process.env.GOOGLE_MAPS_SERVER_API_KEY = "server-test-key";
   const calls: { url: string; init?: RequestInit }[] = [];
@@ -100,6 +98,18 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
         "server-test-key",
       );
       assert.equal(init?.cache, "no-store");
+      if (mode === "pagination" && url.includes(":searchText")) {
+        const token = JSON.parse(String(init?.body)).pageToken;
+        return Response.json(
+          token
+            ? {
+                places: [
+                  { ...raw, id: "ChIJSyntheticCafe2", photos: undefined },
+                ],
+              }
+            : { places: [raw], nextPageToken: "page-two-token" },
+        );
+      }
       if (mode === "denied") return Response.json({}, { status: 403 });
       if (mode === "quota") return Response.json({}, { status: 429 });
       if (url.includes("/media?"))
@@ -212,7 +222,7 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
         assert.equal(place.id, "google:ChIJSyntheticCafe1");
         assert.ok(isVerifiedPlace(place));
         assert.equal(calls.length, 1);
-        assert.ok(calls[0].url.endsWith("places:searchNearby"));
+        assert.ok(calls[0].url.endsWith("places:searchText"));
         const mask = new Headers(calls[0].init?.headers).get(
           "X-Goog-FieldMask",
         )!;
@@ -221,11 +231,8 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
           mask,
           /rating|reviews|openingHours|phone|website|\*/i,
         );
-        assert.equal(
-          JSON.parse(String(calls[0].init?.body)).maxResultCount,
-          20,
-        );
-        assert.equal(result.nextOffset, null);
+        assert.equal(JSON.parse(String(calls[0].init?.body)).pageSize, 20);
+        assert.equal(result.nextPageToken, null);
         assert.equal(result.places[0].costCOP, null);
         assert.ok(!JSON.stringify(result).includes("server-test-key"));
         assert.ok(acceptedJourney([place.id], [place]));
@@ -339,20 +346,20 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
       },
     );
     await t.test(
-      "saved journeys retain Google IDs and schedule, and preserve OSM snapshots",
+      "saved journeys retain Google IDs and schedule, and discard place content",
       () => {
-        const osm = fixturePlaces()[0];
+        const other = fixturePlaces()[0];
         const stored = storedJourney({
-          results: [place, osm],
-          places: [place, osm],
-          acceptedIds: [place.id, osm.id],
+          results: [place, other],
+          places: [place, other],
+          acceptedIds: [place.id, other.id],
           search: {
             ...spec,
             center: place.coordinates,
             near: "Consulta del viajero",
             reference: { id: place.id, name: place.name },
           },
-          itinerary: acceptedJourney([place.id, osm.id], [place, osm]),
+          itinerary: acceptedJourney([place.id, other.id], [place, other]),
           profile: emptyProfile,
           mode: "demo",
         });
@@ -361,8 +368,8 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
         assert.ok(!text.includes("Direccion sintetica"));
         assert.ok(!text.includes("SyntheticPhoto1"));
         assert.ok(!text.includes("Autor sintetico"));
-        assert.deepEqual(stored.googlePlaceIds, [place.id]);
-        assert.deepEqual(stored.places, [osm]);
+        assert.deepEqual(stored.googlePlaceIds, [place.id, other.id]);
+        assert.deepEqual(stored.places, []);
         assert.equal(stored.search.center, undefined);
         assert.equal(stored.itinerary?.days[0].stops[0].placeId, place.id);
       },
@@ -380,25 +387,54 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
         await resolvePlaces([place.id]);
         assert.equal(calls.length, count + 2);
         count = calls.length;
-        process.env.NEXT_PUBLIC_PLACES_PROVIDER = "osm";
-        await assert.rejects(
-          resolvePlaces([place.id], [place]),
-          /Activa Google/,
-        );
-        assert.equal(calls.length, count);
-        process.env.NEXT_PUBLIC_PLACES_PROVIDER = "google";
+        const expired = signPlace({
+          ...place,
+          observedAt: new Date(Date.now() - 31 * 60000).toISOString(),
+        });
+        await resolvePlaces([place.id], [expired]);
+        assert.equal(calls.length, count + 1);
       },
     );
     await t.test(
-      "denials and quotas report errors without switching providers or retrying",
+      "continuation tokens preserve the query and fetch only the requested next page",
       async () => {
-        mode = "denied";
-        await assert.rejects(discoverPlaces(spec), /rechazó la clave/);
-        mode = "quota";
-        await assert.rejects(discoverPlaces(spec), /cuota configurada/);
-        const count = calls.length;
-        await assert.rejects(discoverPlaces(spec), /límite temporal/);
-        assert.equal(calls.length, count);
+        mode = "pagination";
+        const start = calls.length;
+        const first = await discoverPlaces(spec);
+        assert.equal(first.nextPageToken, "page-two-token");
+        const second = await discoverPlaces(first.spec, first.nextPageToken!);
+        assert.equal(second.places[0].id, "google:ChIJSyntheticCafe2");
+        assert.equal(second.nextPageToken, null);
+        assert.equal(calls.length, start + 2);
+        const a = JSON.parse(String(calls[start].init?.body));
+        const b = JSON.parse(String(calls[start + 1].init?.body));
+        assert.equal(b.pageToken, first.nextPageToken);
+        delete b.pageToken;
+        assert.deepEqual(b, a);
+        assert.ok(
+          new Headers(calls[start].init?.headers)
+            .get("X-Goog-FieldMask")!
+            .includes("nextPageToken"),
+        );
+        mode = "success";
+      },
+    );
+    await t.test(
+      "denials and quotas report errors without retries",
+      async () => {
+        const later = Date.now() + 61000;
+        const clock = mock.method(Date, "now", () => later);
+        try {
+          mode = "denied";
+          await assert.rejects(discoverPlaces(spec), /rechazó la clave/);
+          mode = "quota";
+          await assert.rejects(discoverPlaces(spec), /cuota configurada/);
+          const count = calls.length;
+          await assert.rejects(discoverPlaces(spec), /límite temporal/);
+          assert.equal(calls.length, count);
+        } finally {
+          clock.mock.restore();
+        }
       },
     );
   } finally {

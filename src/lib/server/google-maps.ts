@@ -275,7 +275,8 @@ export function normalizeGooglePlace(
   const photo = p.photos?.find(
     (v) =>
       /^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(v.name) &&
-      v.name.length <= 2000,
+      v.name.length <= 2000 &&
+      v.name.startsWith(`places/${p.id}/photos/`),
   );
   const place = placeSchema.safeParse({
     id: `google:${p.id}`,
@@ -319,56 +320,50 @@ export function normalizeGooglePlace(
   return place.success ? place.data : null;
 }
 
-export async function discoverGooglePlaces(spec: SearchSpec, offset = 0) {
-  if (offset)
-    throw new HttpError(
-      400,
-      "Google Maps devuelve hasta 20 coincidencias por búsqueda. Ajusta el nombre, la categoría o la zona.",
-    );
+export async function discoverGooglePlaces(
+  spec: SearchSpec,
+  pageToken?: string,
+) {
   rateLimit("google:search", 10, 60000);
   const [latitude, longitude] = spec.center ?? searchZones[spec.zone].center;
-  // Natural features are not valid Nearby Search types; use a text query for them.
-  const textSearch =
-    !!spec.name ||
-    spec.regionalFood ||
-    spec.categories.some((c) =>
-      ["naturaleza", "cascadas", "miradores"].includes(c),
-    );
-  const mask = fields.map((f) => `places.${f}`).join(",");
+  const dy = spec.radius / 111000;
+  const dx = dy / Math.cos((latitude * Math.PI) / 180);
   const data = z
-    .object({ places: z.array(z.unknown()).max(20).default([]) })
+    .object({
+      places: z.array(z.unknown()).max(20).default([]),
+      nextPageToken: z.string().max(4096).optional(),
+    })
     .parse(
       await googleRequest(
-        textSearch ? "places:searchText" : "places:searchNearby",
-        mask,
-        textSearch
-          ? {
-              textQuery: `${spec.name || spec.categories.map((c) => categoryLabels[c]).join(" y ")}${spec.regionalFood ? " comida típica" : ""}${spec.center ? " en " : ` en ${searchZones[spec.zone].label}, `}Nariño, Colombia`,
-              languageCode: "es",
-              regionCode: "CO",
-              pageSize: 20,
-              locationBias: {
-                circle: {
-                  center: { latitude, longitude },
-                  radius: spec.radius,
+        "places:searchText",
+        [...fields.map((f) => `places.${f}`), "nextPageToken"].join(","),
+        {
+          textQuery: `${spec.name || spec.categories.map((c) => categoryLabels[c]).join(" o ")}${spec.regionalFood ? " comida típica" : ""}${spec.center ? " en " : ` en ${searchZones[spec.zone].label}, `}Nariño, Colombia`,
+          languageCode: "es",
+          regionCode: "CO",
+          pageSize: 20,
+          ...(spec.name
+            ? {
+                locationBias: {
+                  circle: {
+                    center: { latitude, longitude },
+                    radius: spec.radius,
+                  },
                 },
-              },
-            }
-          : {
-              includedTypes: [
-                ...new Set(spec.categories.flatMap((c) => types[c])),
-              ],
-              languageCode: "es",
-              regionCode: "CO",
-              maxResultCount: 20,
-              rankPreference: "DISTANCE",
-              locationRestriction: {
-                circle: {
-                  center: { latitude, longitude },
-                  radius: spec.radius,
+              }
+            : {
+                locationRestriction: {
+                  rectangle: {
+                    low: { latitude: latitude - dy, longitude: longitude - dx },
+                    high: {
+                      latitude: latitude + dy,
+                      longitude: longitude + dx,
+                    },
+                  },
                 },
-              },
-            },
+              }),
+          ...(pageToken ? { pageToken } : {}),
+        },
       ),
     );
   const observedAt = new Date().toISOString();
@@ -383,15 +378,14 @@ export async function discoverGooglePlaces(spec: SearchSpec, offset = 0) {
   return {
     places,
     total: places.length,
-    truncated: false,
-    nextOffset: null,
+    nextPageToken: data.nextPageToken ?? null,
     spec,
     source: "google" as const,
     provider: "Google Maps",
     observedAt,
     notice: spec.regionalFood
-      ? "Resultados de Google Maps para comida típica; la cocina regional debe confirmarse con cada lugar."
-      : "Hasta 20 coincidencias de Google Maps. Ajusta los filtros para explorar otros lugares.",
+      ? "Confirma con cada lugar su oferta de comida regional."
+      : null,
   };
 }
 

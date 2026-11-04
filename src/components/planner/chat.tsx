@@ -3,7 +3,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { ArrowUp, Compass, Info, LoaderCircle, RotateCcw } from "lucide-react";
 import { usePlanner } from "./provider";
-import { usesGoogleMaps } from "@/lib/maps-config";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
@@ -56,7 +55,7 @@ export function ChatPanel() {
             {state.mode === "gemini"
               ? "Conversando con Gemini"
               : state.mode === "demo"
-                ? `${usesGoogleMaps() ? "Google Maps" : "OpenStreetMap"} · planificación sin IA`
+                ? `Google Maps · planificación sin IA`
                 : "Una conversación, tu próximo recorrido"}
           </p>
         </div>
