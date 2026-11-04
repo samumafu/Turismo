@@ -26,7 +26,7 @@ const json = (body: ChatResponse) =>
 export async function POST(request: Request) {
   try {
     guardRequest(request, "chat");
-    const parsed = chatRequestSchema.safeParse(await readJson(request, 150000));
+    const parsed = chatRequestSchema.safeParse(await readJson(request, 500000));
     if (!parsed.success)
       throw new HttpError(
         400,

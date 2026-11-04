@@ -15,13 +15,49 @@ export default function Sources() {
             La información también.
           </h1>
           <p>
-            Los lugares se consultan en OpenStreetMap al buscar. No mantenemos
-            una lista manual de atractivos.
+            Los lugares se consultan en el proveedor seleccionado: Google Maps o
+            los datos abiertos de OpenStreetMap. No mantenemos una lista manual
+            de atractivos.
           </p>
         </header>
         <div className="sources-body">
+          <section id="google-maps">
+            <h2>Google Maps</h2>
+            <p>
+              Cuando está habilitado, Google Maps proporciona el mapa, los
+              lugares y las rutas. Cada búsqueda solicita hasta 20 coincidencias
+              dentro del radio seleccionado, verificando que correspondan a
+              Nariño, Colombia. Las fotos se solicitan individualmente, al
+              pulsar «Ver foto del lugar», y conservan la atribución a sus
+              autores. La falta de una foto o de un resultado no implica que el
+              lugar no exista.
+            </p>
+            <p>
+              El contenido de Google permanece en la sesión activa. Al guardar o
+              descargar el viaje conservamos sus identificadores y tus
+              elecciones; los nombres, direcciones y fotos de Google se vuelven
+              a consultar al abrirlo. Los precios, horarios y disponibilidad se
+              confirman en la ficha del lugar. Las horas de tu agenda son
+              orientativas.
+            </p>
+            <p>
+              Las consultas y referencias de búsqueda se envían a Google. El
+              mapa también conecta el navegador con Google; las rutas envían
+              origen, destinos y modo de viaje. Consulta la{" "}
+              <a href="https://policies.google.com/privacy">
+                Política de Privacidad de Google
+              </a>
+              , incorporada a esta política, y los{" "}
+              <a href="https://maps.google.com/help/terms_maps/">
+                Términos de Servicio de Google Maps
+              </a>
+              , incorporados a las condiciones de uso de esta aplicación. El
+              servicio se ofrece como herramienta de planificación orientativa;
+              verifica accesos, horarios y condiciones antes de viajar.
+            </p>
+          </section>
           <section>
-            <h2>De dónde vienen los lugares</h2>
+            <h2>Modo alternativo: OpenStreetMap</h2>
             <p>
               Los resultados provienen de{" "}
               <a href="https://www.openstreetmap.org/copyright">
@@ -92,15 +128,16 @@ export default function Sources() {
               Con una clave configurada, Gemini interpreta zona, categorías,
               elecciones y punto de partida. El itinerario contiene únicamente
               visitas aceptadas por el viajero; buscar opciones no las añade. La
-              interfaz conserva las coordenadas y nombres de OSM. Las etiquetas
-              de OSM y la conversación se tratan como datos, nunca como
-              instrucciones del sistema.
+              interfaz conserva las coordenadas y nombres del proveedor. Los
+              datos de lugares y la conversación se tratan como datos, nunca
+              como instrucciones del sistema.
             </p>
             <p>
-              Sin clave o si Gemini falla se usa búsqueda OSM y planificación
-              por reglas, señalada como “sin IA”. Elegir visitas no requiere
-              completar presupuesto ni acompañantes. Las recomendaciones de IA y
-              por reglas son orientativas, no reservas ni cotizaciones.
+              Sin clave de Gemini o si Gemini falla se usa el buscador
+              configurado y planificación por reglas, señalada como “sin IA”.
+              Elegir visitas no requiere completar presupuesto ni acompañantes.
+              Las recomendaciones de IA y por reglas son orientativas, no
+              reservas ni cotizaciones.
             </p>
             <p>
               No inventamos precios, teléfonos o disponibilidad. Un horario de
@@ -142,7 +179,9 @@ export default function Sources() {
               ruta con límites de frecuencia. Solo se dibuja la geometría
               devuelta por el proveedor; confirma accesos finales a sitios
               naturales. El transporte público y las rutas no disponibles tienen
-              enlaces externos de Google Maps, sin Google Places ni API de pago.
+              enlaces externos de Google Maps. Cuando se selecciona el modo
+              Google, el mapa y las rutas se consultan directamente a Google
+              Maps Platform.
             </p>
             <p>
               Overpass y OSRM son servicios compartidos sin garantía de
@@ -170,13 +209,15 @@ export default function Sources() {
               licencia.
             </p>
             <p>
-              Las fotografías se consultan a petición en Wikimedia Commons,
-              usando enlaces de OSM o una coincidencia de nombre y ubicación en
-              Wikidata. Cada imagen muestra autor, licencia y enlace de origen.
-              Solo se aceptan CC BY, CC BY-SA, CC0 y dominio público. Si no hay
-              una foto verificada se ofrece Google Maps como enlace externo. No
-              se copian fotografías de Google ni se usa una foto cercana como si
-              fuera del lugar elegido.
+              Las fotografías se consultan a petición en Wikimedia Commons, en
+              el modo OSM, usando sus enlaces o una coincidencia de nombre y
+              ubicación en Wikidata. Cada imagen muestra autor, licencia y
+              enlace de origen. Solo se aceptan CC BY, CC BY-SA, CC0 y dominio
+              público. Si no hay una foto verificada se ofrece Google Maps como
+              enlace externo. No se usa una foto cercana como si fuera del lugar
+              elegido. En modo Google, las fotos se solicitan a Places API y se
+              muestran con la atribución de Google Maps y sus autores; no se
+              guardan como archivos de la aplicación.
             </p>
           </section>
           <section id="privacidad">

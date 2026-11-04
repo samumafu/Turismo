@@ -52,15 +52,26 @@ export const coordinateSchema = z.tuple([
 export const osmIdSchema = z
   .string()
   .regex(/^osm:(node|way|relation):[1-9]\d{0,14}$/);
+export const googleIdSchema = z.string().regex(/^google:[A-Za-z0-9_-]{5,240}$/);
+export const placeIdSchema = z.union([osmIdSchema, googleIdSchema]);
+export const googleAuthorSchema = z.object({
+  displayName: z.string().max(250),
+  uri: z
+    .string()
+    .url()
+    .regex(/^https?:\/\//)
+    .max(1000)
+    .optional(),
+});
 export const placeSchema = z.object({
-  id: osmIdSchema,
+  id: placeIdSchema,
   name: z.string().min(1).max(180),
   category: z.string().max(80),
   categoryKey: z.enum(categoryKeys),
   region: z.string().max(140),
   description: z.string().max(600),
   coordinates: coordinateSchema,
-  coordinateKind: z.enum(["node", "center"]),
+  coordinateKind: z.enum(["node", "center", "place"]),
   zone: z.string().max(100),
   visitMinutes: z.number().nullable(),
   costCOP: z.null(),
@@ -82,8 +93,33 @@ export const placeSchema = z.object({
     .optional(),
   commons: z.string().max(250).optional(),
   verification: z.string().max(100).optional(),
+  googlePhoto: z
+    .object({
+      name: z
+        .string()
+        .regex(/^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/)
+        .max(2000),
+      authors: z.array(googleAuthorSchema).max(10),
+    })
+    .optional(),
+  googleAttributions: z
+    .array(
+      z.object({
+        provider: z.string().max(250),
+        providerUri: z
+          .string()
+          .url()
+          .regex(/^https?:\/\//)
+          .max(1000)
+          .optional(),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
 export type Place = z.infer<typeof placeSchema>;
+export const isGooglePlace = (place: Pick<Place, "id">) =>
+  place.id.startsWith("google:");
 export const searchSpecSchema = z.object({
   zone: z.enum(zoneKeys).default("pasto"),
   center: coordinateSchema.optional(),
@@ -92,7 +128,7 @@ export const searchSpecSchema = z.object({
   name: z.string().trim().max(80).default(""),
   near: z.string().trim().max(160).optional(),
   reference: z
-    .object({ id: osmIdSchema, name: z.string().max(180) })
+    .object({ id: placeIdSchema, name: z.string().max(180) })
     .optional(),
   regionalFood: z.boolean().default(false),
 });
@@ -108,7 +144,7 @@ export const searchResponseSchema = z.object({
   truncated: z.boolean(),
   nextOffset: z.number().nullable(),
   spec: searchSpecSchema,
-  source: z.enum(["overpass", "photon", "cache", "stale-cache"]),
+  source: z.enum(["google", "overpass", "photon", "cache", "stale-cache"]),
   provider: z.string().max(200).optional(),
   observedAt: z.string(),
   notice: z.string().nullable(),
@@ -124,6 +160,8 @@ export function haversine(a: number[], b: number[]) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(t), Math.sqrt(1 - t));
 }
 export function mapsLink(place: Place) {
+  if (isGooglePlace(place))
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${encodeURIComponent(place.id.slice(7))}`;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.coordinates.join(","))}`;
 }
 export function directionsLink(

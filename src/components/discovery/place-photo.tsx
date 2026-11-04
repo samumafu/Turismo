@@ -3,26 +3,44 @@ import Image from "next/image";
 import { useState } from "react";
 import { Camera, LoaderCircle } from "lucide-react";
 import { z } from "zod";
-import type { Place } from "@/lib/places";
+import { googleAuthorSchema, isGooglePlace, type Place } from "@/lib/places";
 import { Button } from "@/components/ui/button";
 const schema = z.object({
   photo: z
-    .object({
-      url: z
-        .string()
-        .url()
-        .refine(
-          (url) =>
-            new URL(url).protocol === "https:" &&
-            ["upload.wikimedia.org", "thumb.wikimedia.org"].includes(
-              new URL(url).hostname,
-            ),
-        ),
-      page: z.string().url().startsWith("https://commons.wikimedia.org/"),
-      author: z.string(),
-      license: z.string(),
-      licenseUrl: z.string().url(),
-    })
+    .union([
+      z.object({
+        provider: z.literal("google"),
+        url: z
+          .string()
+          .url()
+          .refine((value) => {
+            const u = new URL(value);
+            return (
+              u.protocol === "https:" &&
+              (u.hostname === "googleusercontent.com" ||
+                u.hostname.endsWith(".googleusercontent.com"))
+            );
+          }),
+        page: z.string().url().startsWith("https://www.google.com/maps/"),
+        authors: z.array(googleAuthorSchema),
+      }),
+      z.object({
+        url: z
+          .string()
+          .url()
+          .refine(
+            (url) =>
+              new URL(url).protocol === "https:" &&
+              ["upload.wikimedia.org", "thumb.wikimedia.org"].includes(
+                new URL(url).hostname,
+              ),
+          ),
+        page: z.string().url().startsWith("https://commons.wikimedia.org/"),
+        author: z.string(),
+        license: z.string(),
+        licenseUrl: z.string().url(),
+      }),
+    ])
     .nullable(),
 });
 export function PlacePhoto({ place }: { place: Place }) {
@@ -39,10 +57,17 @@ export function PlacePhoto({ place }: { place: Place }) {
         body: JSON.stringify(place),
         signal: AbortSignal.timeout(22000),
       });
-      if (!r.ok)
-        throw new Error(
-          "No se pudo consultar la foto. Puedes ver imágenes en Google Maps.",
+      if (!r.ok) {
+        const failure = z
+          .object({ error: z.string().max(400) })
+          .safeParse(await r.json());
+        setError(
+          failure.success
+            ? failure.data.error
+            : "No se pudo consultar la foto. Puedes ver imágenes en Google Maps.",
         );
+        return;
+      }
       setData(schema.parse(await r.json()));
     } catch {
       setError(
@@ -54,7 +79,52 @@ export function PlacePhoto({ place }: { place: Place }) {
   }
   return (
     <div className="place-photo-block">
-      {data?.photo ? (
+      {data?.photo && "provider" in data.photo ? (
+        <figure>
+          <a href={data.photo.page} target="_blank" rel="noopener noreferrer">
+            <Image
+              unoptimized
+              src={data.photo.url}
+              alt={place.name}
+              width={640}
+              height={360}
+              className="place-photo-image"
+              onError={() => {
+                setData(null);
+                setError(
+                  "La foto caducó o no se pudo cargar. Vuelve a consultar el lugar.",
+                );
+              }}
+            />
+          </a>
+          <figcaption>
+            <a
+              href={data.photo.page}
+              target="_blank"
+              rel="noopener noreferrer"
+              translate="no"
+            >
+              Google Maps
+            </a>
+            {data.photo.authors.map((author, index) => (
+              <span key={index}>
+                {" · "}
+                {author.uri ? (
+                  <a
+                    href={author.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {author.displayName}
+                  </a>
+                ) : (
+                  author.displayName
+                )}
+              </span>
+            ))}
+          </figcaption>
+        </figure>
+      ) : data?.photo && "author" in data.photo ? (
         <figure>
           <a href={data.photo.page} target="_blank" rel="noopener noreferrer">
             <Image
@@ -87,8 +157,9 @@ export function PlacePhoto({ place }: { place: Place }) {
         </figure>
       ) : data ? (
         <p className="map-note">
-          Sin fotografía con licencia verificada. Puedes ver fotos en Google
-          Maps.
+          {isGooglePlace(place)
+            ? "Google Maps no ofrece una foto para este lugar en esta consulta."
+            : "Sin fotografía con licencia verificada. Puedes ver fotos en Google Maps."}
         </p>
       ) : (
         <Button variant="ghost" size="sm" onClick={load} disabled={busy}>

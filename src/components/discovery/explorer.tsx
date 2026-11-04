@@ -38,6 +38,9 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Viewport } from "./place-map";
+import { usesGoogleMaps } from "@/lib/maps-config";
+import { GoogleAttribution } from "./google-attribution";
+import { PlacePhoto } from "./place-photo";
 const PlaceMap = dynamic(() => import("./place-map"), {
   ssr: false,
   loading: () => <Skeleton className="h-[480px] w-full" />,
@@ -139,8 +142,9 @@ export function DiscoveryExplorer({
       <div className="discovery-intro">
         <h2 id="discovery-title">Encuentra tu próximo lugar</h2>
         <p>
-          Busca en los datos abiertos de OpenStreetMap. Explora por zona, nombre
-          o categoría; cada consulta carga una página de hasta 50 lugares.
+          {usesGoogleMaps()
+            ? "Busca lugares en Google Maps por zona, nombre o categoría. Cada búsqueda consulta hasta 20 coincidencias; las fotos se cargan al pedirlas."
+            : "Busca en los datos abiertos de OpenStreetMap. Explora por zona, nombre o categoría; cada consulta carga una página de hasta 50 lugares."}
         </p>
       </div>
       <form className="discovery-form" onSubmit={submit}>
@@ -255,7 +259,8 @@ export function DiscoveryExplorer({
       ) : null}
       {busy ? (
         <p role="status" className="discovery-status">
-          Consultando OpenStreetMap por zona y categoría…
+          Consultando {usesGoogleMaps() ? "Google Maps" : "OpenStreetMap"} por
+          zona y categoría…
         </p>
       ) : null}
       {result?.notice ? (
@@ -273,16 +278,19 @@ export function DiscoveryExplorer({
             </strong>
             {result ? (
               <span>
-                {result.source === "overpass"
-                  ? "Consulta OSM"
-                  : result.source === "photon"
-                    ? "Índice Photon / OpenStreetMap"
-                    : result.source === "stale-cache"
-                      ? "Caché temporal anterior"
-                      : "Caché temporal OSM"}
+                {result.source === "google"
+                  ? "Google Maps"
+                  : result.source === "overpass"
+                    ? "Consulta OSM"
+                    : result.source === "photon"
+                      ? "Índice Photon / OpenStreetMap"
+                      : result.source === "stale-cache"
+                        ? "Caché temporal anterior"
+                        : "Caché temporal OSM"}
               </span>
             ) : null}
           </div>
+          <GoogleAttribution places={result?.places ?? []} />
           {result?.places.length ? (
             <ol className="discovery-list">
               {result.places.map((place, index) => (
@@ -306,15 +314,20 @@ export function DiscoveryExplorer({
                       <p>{place.description}</p>
                       <p>{place.note}</p>
                       <p>
-                        Horarios declarados en OSM:{" "}
-                        {place.openingHours ?? "sin datos"}. Tarifas y
+                        Horarios{" "}
+                        {place.id.startsWith("google:")
+                          ? "(consulta la ficha de Google Maps)"
+                          : "declarados en OSM"}
+                        : {place.openingHours ?? "sin datos"}. Tarifas y
                         disponibilidad por confirmar.
                       </p>
                       <p>
                         Coordenadas: {place.coordinates.join(", ")}
                         {place.coordinateKind === "center"
                           ? " (centro del objeto, no entrada)"
-                          : " (nodo OSM)"}
+                          : place.coordinateKind === "place"
+                            ? " (ubicación de Google Maps; confirma la entrada)"
+                            : " (nodo OSM)"}
                         .
                       </p>
                       <a
@@ -325,6 +338,7 @@ export function DiscoveryExplorer({
                         {place.id} <ArrowUpRight size={13} aria-hidden="true" />
                       </a>
                     </details>
+                    <PlacePhoto place={place} />
                     <div className="discovery-result-actions">
                       <a
                         href={mapsLink(place)}
@@ -365,19 +379,19 @@ export function DiscoveryExplorer({
                 <EmptyTitle>
                   {result
                     ? "Sin coincidencias en esta zona"
-                    : "Busca lugares en OpenStreetMap"}
+                    : "Busca lugares en el mapa"}
                 </EmptyTitle>
                 <EmptyDescription>
                   {result
-                    ? "Cambia el radio, la categoría o el nombre. OSM puede no tener registrado lo que buscas."
-                    : "Usa los filtros para buscar lugares en OpenStreetMap."}
+                    ? "Cambia el radio, la categoría o el nombre. Puede faltar información de algunos lugares."
+                    : "Usa los filtros para buscar lugares en la zona que te interesa."}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : (
             <Skeleton className="h-48 w-full" />
           )}
-          {result ? (
+          {result && result.source !== "google" ? (
             <div className="discovery-pagination">
               <Button
                 variant="outline"

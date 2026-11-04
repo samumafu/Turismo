@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { directionsLink, searchZones, type Place } from "@/lib/places";
+import { usesGoogleMaps } from "@/lib/maps-config";
 import PlaceMap from "@/components/discovery/place-map";
 import { usePlanner } from "./provider";
 import type { UserPosition } from "./use-user-location";
@@ -281,6 +282,9 @@ function RoutingMap({
         onSelect={actions.togglePlace}
         selectedIds={state.selectedIds}
         selectionLabel="Añadir a mi itinerario"
+        position={position}
+        originLabel={originLabel}
+        routeCoordinates={current?.data?.geometry.coordinates}
       >
         <RouteOverlay
           position={position}
@@ -376,27 +380,35 @@ function RoutingMap({
         </Alert>
       ) : null}
       <div className="map-attribution">
-        <span>
-          Rutas:{" "}
-          <a
-            href="https://routing.openstreetmap.de/about.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            FOSSGIS / OSRM
-          </a>{" "}
-          · datos ©{" "}
-          <a href="https://www.openstreetmap.org/copyright">
-            OpenStreetMap, ODbL
-          </a>
-        </span>
-        <a
-          href="https://www.openstreetmap.org/fixthemap"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Reportar un problema del mapa
-        </a>
+        {usesGoogleMaps() ? (
+          <span>
+            Mapa y rutas: Google Maps · verifica el acceso antes de viajar.
+          </span>
+        ) : (
+          <>
+            <span>
+              Rutas:{" "}
+              <a
+                href="https://routing.openstreetmap.de/about.html"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                FOSSGIS / OSRM
+              </a>{" "}
+              · datos ©{" "}
+              <a href="https://www.openstreetmap.org/copyright">
+                OpenStreetMap, ODbL
+              </a>
+            </span>
+            <a
+              href="https://www.openstreetmap.org/fixthemap"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Reportar un problema del mapa
+            </a>
+          </>
+        )}
       </div>
     </>
   );

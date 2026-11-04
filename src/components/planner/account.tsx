@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { journeySnapshotSchema, usePlanner } from "./provider";
+import { storedJourney } from "@/lib/journey-storage";
 
 type FormMode = "login" | "register" | "confirm" | "forgot";
 const pendingJourneyKey = "turismo-narino:pending-registration";
@@ -45,16 +46,17 @@ export function Account() {
   const writeQueue = useRef<Promise<void>>(Promise.resolve());
   const userId = user?.id;
   const snapshot = useMemo(
-    () => ({
-      action: state.action,
-      results: state.results,
-      places: state.places,
-      search: state.search,
-      profile: state.profile,
-      itinerary: state.itinerary,
-      acceptedIds: state.selectedIds,
-      mode: state.mode,
-    }),
+    () =>
+      storedJourney({
+        action: state.action,
+        results: state.results,
+        places: state.places,
+        search: state.search,
+        profile: state.profile,
+        itinerary: state.itinerary,
+        acceptedIds: state.selectedIds,
+        mode: state.mode,
+      }),
     [
       state.action,
       state.results,
@@ -70,19 +72,22 @@ export function Account() {
   const hasJourney = !!state.itinerary || state.results.length > 0;
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(pendingJourneyKey);
-      if (!raw) return;
-      const parsed = journeySnapshotSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) {
-        pendingRestored.current = current.current.actions.loadJourney(
-          parsed.data,
-        );
+    void (async () => {
+      try {
+        const raw = sessionStorage.getItem(pendingJourneyKey);
+        if (!raw) return;
+        const parsed = journeySnapshotSchema.safeParse(JSON.parse(raw));
+        if (parsed.success) {
+          pendingRestored.current = true;
+          pendingRestored.current = await current.current.actions.loadJourney(
+            parsed.data,
+          );
+        }
+        sessionStorage.removeItem(pendingJourneyKey);
+      } catch {
+        // Storage can be disabled; the planner still works in memory.
       }
-      sessionStorage.removeItem(pendingJourneyKey);
-    } catch {
-      // Storage can be disabled; the planner still works in memory.
-    }
+    })();
   }, []);
 
   useEffect(() => {
@@ -220,7 +225,7 @@ export function Account() {
         existing.results.length > 0;
       pendingRestored.current = false;
       if (parsed.success && !hasOpenJourney) {
-        if (current.current.actions.loadJourney(parsed.data)) {
+        if (await current.current.actions.loadJourney(parsed.data)) {
           setSyncEnabled(true);
           setMessage("Tu viaje guardado está listo.");
         } else setMessage("No se pudo cargar el viaje guardado.");
@@ -279,7 +284,7 @@ export function Account() {
       .eq("user_id", user.id)
       .maybeSingle();
     const parsed = journeySnapshotSchema.safeParse(data?.journey);
-    if (error || !parsed.success || !actions.loadJourney(parsed.data))
+    if (error || !parsed.success || !(await actions.loadJourney(parsed.data)))
       setMessage("No se pudo abrir el viaje guardado.");
     else {
       setSyncEnabled(true);

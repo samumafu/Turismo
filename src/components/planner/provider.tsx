@@ -22,7 +22,8 @@ import {
 import { acceptedJourney } from "@/lib/accepted-journey";
 import { useUserLocation } from "./use-user-location";
 import {
-  osmIdSchema,
+  placeIdSchema,
+  googleIdSchema,
   placeSchema,
   searchSpecSchema,
   type Place,
@@ -43,7 +44,8 @@ export const journeySnapshotSchema = z.object({
   profile: profileSchema,
   itinerary: itinerarySchema.nullable(),
   mode: z.enum(["gemini", "demo"]).nullable(),
-  acceptedIds: z.array(osmIdSchema).max(25).default([]),
+  acceptedIds: z.array(placeIdSchema).max(25).default([]),
+  googlePlaceIds: z.array(googleIdSchema).max(25).default([]),
 });
 export type JourneySnapshot = z.infer<typeof journeySnapshotSchema>;
 type State = {
@@ -73,7 +75,7 @@ type PlannerContextValue = {
     clearOrigin: () => void;
     reset: () => void;
     restore: () => void;
-    loadJourney: (snapshot: JourneySnapshot) => boolean;
+    loadJourney: (snapshot: JourneySnapshot) => Promise<boolean>;
     discover: (result: SearchResponse) => void;
     selectPlaces: (ids: string[], search: SearchSpec) => void;
   };
@@ -224,8 +226,42 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       undo.current = null;
     }
   }
-  function loadJourney(snapshot: JourneySnapshot) {
+  async function loadJourney(snapshot: JourneySnapshot) {
     if (lock.current) return false;
+    if (snapshot.googlePlaceIds.length) {
+      lock.current = true;
+      setState((s) => ({ ...s, busy: true, error: null }));
+      try {
+        const response = await fetch("/api/places/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: snapshot.googlePlaceIds }),
+          signal: AbortSignal.timeout(80000),
+        });
+        const body = await response.json();
+        if (!response.ok)
+          throw new Error(
+            body.error ||
+              "No se pudieron actualizar los lugares de Google Maps.",
+          );
+        const places = z
+          .object({ places: z.array(placeSchema).max(25) })
+          .parse(body).places;
+        snapshot = { ...snapshot, places: [...snapshot.places, ...places] };
+      } catch (error) {
+        setState((s) => ({
+          ...s,
+          busy: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "No se pudo abrir el viaje.",
+        }));
+        return false;
+      } finally {
+        lock.current = false;
+      }
+    }
     const acceptedIds = snapshot.acceptedIds.filter((id) =>
       snapshot.places.some(
         (p) => p.id === id && p.availability !== "restringido",
@@ -249,6 +285,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           ? "El viaje anterior contiene propuestas sin confirmar. Elige las visitas que quieras conservar."
           : null,
       error: null,
+      busy: false,
     }));
     return true;
   }

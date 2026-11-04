@@ -144,7 +144,7 @@ export function makeDynamicPlan(
       return { day: index + 1, title: "Explorar " + group[0].region, stops };
     }),
     recommendations: [
-      "Los lugares provienen de OpenStreetMap. Sus etiquetas comunitarias no prueban apertura, calidad ni disponibilidad.",
+      "Los lugares provienen del proveedor indicado en sus fichas. Sus datos no prueban apertura, calidad ni disponibilidad.",
       "Los horarios de este plan son sugeridos; confirma horarios reales, tarifas, accesos y transporte.",
       "La separación entre visitas es un margen de planificación, no un tiempo de viaje calculado. Consulta la ruta vial o el enlace externo.",
       "Las provisiones se reparten desde tu presupuesto; no son precios verificados y no garantizan que cubran el viaje.",
@@ -178,7 +178,7 @@ export function dynamicReply(request: ChatRequest, candidates: Place[]) {
   );
   return {
     message: itinerary
-      ? `Propuesta de ${profile.days} días creada con lugares consultados en OpenStreetMap. ${profile.hoursPerDay ? "La agenda usa " + profile.hoursPerDay + " horas por día." : "La agenda usa hasta 8 horas por día como referencia."} Puedes cambiar el presupuesto, reducir días o buscar otros lugares. Si hay pocos resultados, se pueden repetir destinos entre jornadas; amplía la búsqueda para variar.`
+      ? `Propuesta de ${profile.days} días creada con lugares consultados en el proveedor del mapa. ${profile.hoursPerDay ? "La agenda usa " + profile.hoursPerDay + " horas por día." : "La agenda usa hasta 8 horas por día como referencia."} Puedes cambiar el presupuesto, reducir días o buscar otros lugares. Si hay pocos resultados, se pueden repetir destinos entre jornadas; amplía la búsqueda para variar.`
       : "No se encontraron candidatos aptos para este plan. Cambia de categoría, zona o radio.",
     profile,
     itinerary,

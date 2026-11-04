@@ -11,6 +11,8 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty";
 import { PlacePhoto } from "@/components/discovery/place-photo";
+import { GoogleAttribution } from "@/components/discovery/google-attribution";
+import { storedJourney } from "@/lib/journey-storage";
 export function ItineraryPanel() {
   const { state, actions } = usePlanner();
   const { itinerary } = state;
@@ -32,13 +34,16 @@ export function ItineraryPanel() {
       new Blob(
         [
           JSON.stringify(
-            {
+            storedJourney({
               itinerary,
+              results: [],
+              search: state.search,
+              acceptedIds: state.selectedIds,
               places: state.places.filter((p) =>
                 state.selectedIds.includes(p.id),
               ),
               notice: "Horas orientativas. Confirma acceso y horarios.",
-            },
+            }),
             null,
             2,
           ),
@@ -54,6 +59,9 @@ export function ItineraryPanel() {
   }
   return (
     <div className="itinerary-panel">
+      <GoogleAttribution
+        places={state.places.filter((p) => state.selectedIds.includes(p.id))}
+      />
       <div className="itinerary-heading">
         <div>
           <Badge variant="secondary">Visitas aceptadas</Badge>

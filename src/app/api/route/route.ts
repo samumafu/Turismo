@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { resolvePlaces } from "@/lib/server/discovery";
-import { osmIdSchema, placeSchema } from "@/lib/places";
+import { placeIdSchema, placeSchema } from "@/lib/places";
+import { usesGoogleMaps } from "@/lib/maps-config";
+import { googleRoute } from "@/lib/server/google-routes";
 import {
   guardRequest,
   readJson,
@@ -13,7 +15,7 @@ import {
 export const maxDuration = 50;
 const schema = z
   .object({
-    placeIds: z.array(osmIdSchema).min(1).max(5),
+    placeIds: z.array(placeIdSchema).min(1).max(5),
     knownPlaces: z.array(placeSchema).max(5).optional(),
     origin: z
       .tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)])
@@ -45,11 +47,11 @@ const cache = new Map<string, { expires: number; data: unknown }>();
 export async function POST(request: Request) {
   try {
     guardRequest(request, "route");
-    const parsed = schema.safeParse(await readJson(request, 24000));
+    const parsed = schema.safeParse(await readJson(request, 100000));
     if (!parsed.success)
       throw new HttpError(
         400,
-        "Envía una ubicación válida y de 1 a 5 destinos OSM; sin ubicación se necesitan al menos 2 destinos.",
+        "Envía una ubicación válida y de 1 a 5 destinos; sin ubicación se necesitan al menos 2 destinos.",
       );
     const { origin, mode } = parsed.data;
     const stops = await resolvePlaces(
@@ -66,6 +68,11 @@ export async function POST(request: Request) {
       throw new HttpError(
         422,
         "Estos destinos no tienen un acceso válido para esta ruta. Puedes probar a pie o consultar Google Maps y confirmar el acceso.",
+      );
+    if (usesGoogleMaps())
+      return Response.json(
+        await googleRoute(stops, mode, origin, request.signal),
+        { headers: { "Cache-Control": "no-store" } },
       );
     const key = mode + ":" + parsed.data.placeIds.join("|");
     // Never retain GPS coordinates or routes derived from the user's position.

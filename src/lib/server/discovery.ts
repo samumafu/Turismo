@@ -8,9 +8,12 @@ import { HttpError } from "./guard";
 import { OverpassUnavailableError, queryOverpass } from "./overpass";
 import { discoverPhoton } from "./photon";
 import { resolveSearchReference } from "./search-reference";
+import { usesGoogleMaps } from "@/lib/maps-config";
+import { discoverGooglePlaces, resolveGooglePlace } from "./google-maps";
 import { signPlace, isVerifiedPlace } from "./place-verification";
 import {
-  osmIdSchema,
+  placeIdSchema,
+  isGooglePlace,
   searchSpecSchema,
   type Place,
   type SearchResponse,
@@ -30,6 +33,7 @@ const registry = new Map<string, { place: Place; expires: number }>();
 const inFlight = new Map<string, Promise<CacheEntry>>();
 function remember(places: Place[]) {
   for (const place of places) {
+    if (isGooglePlace(place)) continue;
     if (registry.size >= 2000) registry.delete(registry.keys().next().value!);
     registry.set(place.id, {
       place,
@@ -42,6 +46,10 @@ export async function discoverPlaces(
   offset = 0,
 ): Promise<SearchResponse> {
   const spec = await resolveSearchReference(searchSpecSchema.parse(raw));
+  if (usesGoogleMaps()) {
+    const result = await discoverGooglePlaces(spec, offset);
+    return { ...result, places: result.places.map(signPlace) };
+  }
   if (spec.center)
     spec.center = spec.center.map((n) => Math.round(n * 10000) / 10000) as [
       number,
@@ -136,12 +144,33 @@ export async function resolvePlaces(
   const unique = [...new Set(ids)];
   if (
     unique.length > 30 ||
-    unique.some((id) => !osmIdSchema.safeParse(id).success)
+    unique.some((id) => !placeIdSchema.safeParse(id).success)
   )
-    throw new HttpError(400, "Identificadores OSM no válidos.");
-  const missing = unique.filter(
-    (id) => !registry.has(id) || registry.get(id)!.expires < Date.now(),
-  );
+    throw new HttpError(400, "Identificadores de lugares no válidos.");
+  const google = new Map<string, Place>();
+  // Google content lives only in the active request/browser session. Saved
+  // journeys retain IDs and fetch fresh details when opened again.
+  const googleIds = unique.filter((id) => id.startsWith("google:"));
+  if (googleIds.length && !usesGoogleMaps())
+    throw new HttpError(
+      409,
+      "Activa Google Maps para abrir estos lugares guardados.",
+    );
+  for (let start = 0; start < googleIds.length; start += 5) {
+    await Promise.all(
+      googleIds.slice(start, start + 5).map(async (id) => {
+        const snapshot = snapshots.find(
+          (p) => p.id === id && isVerifiedPlace(p),
+        );
+        google.set(id, snapshot ?? signPlace(await resolveGooglePlace(id)));
+      }),
+    );
+  }
+  const missing = unique
+    .filter((id) => !id.startsWith("google:"))
+    .filter(
+      (id) => !registry.has(id) || registry.get(id)!.expires < Date.now(),
+    );
   if (missing.length) {
     try {
       const now = new Date().toISOString();
@@ -159,6 +188,7 @@ export async function resolvePlaces(
   }
   const output = unique
     .map((id) => {
+      if (google.has(id)) return google.get(id);
       const entry = registry.get(id);
       return entry && entry.expires > Date.now() ? entry.place : undefined;
     })

@@ -4,6 +4,7 @@ import { Check, Plus } from "lucide-react";
 import { usePlanner } from "./provider";
 import { mapsLink } from "@/lib/places";
 import { PlacePhoto } from "@/components/discovery/place-photo";
+import { GoogleAttribution } from "@/components/discovery/google-attribution";
 import { Button } from "@/components/ui/button";
 export function PlaceOptions() {
   const { state, actions } = usePlanner();
@@ -13,6 +14,7 @@ export function PlaceOptions() {
   return (
     <section className="place-options" aria-labelledby="place-options-title">
       <h2 id="place-options-title">Elige tus visitas</h2>
+      <GoogleAttribution places={state.results} />
       <p className="map-note">
         Añade solo los lugares que quieras incluir en tu recorrido.
       </p>

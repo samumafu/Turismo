@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { osmIdSchema, placeSchema, searchSpecSchema } from "./places";
+import { placeIdSchema, placeSchema, searchSpecSchema } from "./places";
 
 export const profileSchema = z.object({
   days: z.number().int().min(1).max(5).nullable(),
@@ -22,7 +22,7 @@ export const emptyProfile: z.infer<typeof profileSchema> = {
   preferences: "",
 };
 export const stopSchema = z.object({
-  placeId: osmIdSchema,
+  placeId: placeIdSchema,
   suggestedTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   durationMinutes: z.number().int().min(15).max(240),
   activity: z.string().min(1).max(400),
@@ -66,7 +66,7 @@ export const chatRequestSchema = z
     itinerary: itinerarySchema.nullable().default(null),
     demo: z.boolean().default(false),
     search: searchSpecSchema.optional(),
-    selectedIds: z.array(osmIdSchema).max(25).default([]),
+    selectedIds: z.array(placeIdSchema).max(25).default([]),
     knownPlaces: z.array(placeSchema).max(75).optional(),
   })
   .refine(
@@ -79,7 +79,7 @@ export const chatResponseSchema = modelResponseSchema.extend({
   notice: z.string().max(400).nullable(),
   places: z.array(placeSchema).max(50).default([]),
   search: searchSpecSchema.optional(),
-  selectedIds: z.array(osmIdSchema).max(25).optional(),
+  selectedIds: z.array(placeIdSchema).max(25).optional(),
   origin: agreedOriginSchema.optional(),
   discovery: z
     .object({ total: z.number(), source: z.string(), observedAt: z.string() })

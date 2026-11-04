@@ -1,8 +1,10 @@
 # Turismo Nariño · Turismo Inteligente Pasto
 
-Aplicación Next.js App Router, TypeScript, Tailwind y shadcn/ui con búsqueda turística dinámica en **OpenStreetMap / Overpass**, mapa Leaflet con agrupación y planificación con Gemini opcional.
+Google Maps: integración opcional de mapa, lugares, fotos y rutas. Sigue [la guía de consola y cuotas](docs/google-maps.md). OpenStreetMap permanece disponible como modo alternativo.
 
-**No contiene un catálogo manual de lugares ni un respaldo de 14 destinos.** Los puntos se obtienen de OSM al buscar; las respuestas consultadas usan una caché temporal del servidor. Los viajeros con cuenta pueden guardar su plan.
+Aplicación Next.js App Router, TypeScript, Tailwind y shadcn/ui con búsqueda turística dinámica en **Google Maps / Places** o **OpenStreetMap / Overpass**, mapa según el proveedor y planificación con Gemini opcional.
+
+**No contiene un catálogo manual de lugares ni un respaldo de 14 destinos.** Los puntos se obtienen del proveedor al buscar. Las respuestas de OSM usan caché temporal; los datos de Google se conservan solo en la sesión activa. Los viajeros con cuenta pueden guardar su plan; para Google se guardan IDs y elecciones, consultando otra vez las fichas al abrirlo.
 
 ## Ejecutar
 
@@ -66,7 +68,7 @@ La ubicación solo vive en memoria del navegador, no se persiste con el itinerar
 
 ### Descubrimiento
 
-El proveedor predeterminado es [Overpass de Private.coffee](https://overpass.private.coffee/), que publica acceso gratuito sin registro y pide uso responsable. Es configurable en el servidor:
+En el modo OSM, el proveedor predeterminado es [Overpass de Private.coffee](https://overpass.private.coffee/), que publica acceso gratuito sin registro y pide uso responsable. Es configurable en el servidor:
 
 ```dotenv
 OVERPASS_API_URL=https://overpass.private.coffee/api/interpreter
@@ -88,7 +90,7 @@ Mapa: OpenStreetMap con [atribución y política de teselas](https://operations.
 
 ## Gemini opcional y costo cero
 
-Overpass sigue siendo el proveedor principal. Los resultados de respaldo de Photon caducan al minuto para que una búsqueda posterior vuelva a probar Overpass después de su pausa; los resultados de Overpass se conservan 15 minutos. La interfaz muestra un aviso breve cuando usa el respaldo. Si también aparece «Modo sin IA», Gemini no participó en esa solicitud: comprueba `GEMINI_API_KEY` en las variables del despliegue Vercel y vuelve a desplegar; `.env.local` solo configura el equipo local.
+En el modo OSM, Overpass sigue siendo el proveedor principal. Los resultados de respaldo de Photon caducan al minuto para que una búsqueda posterior vuelva a probar Overpass después de su pausa; los resultados de Overpass se conservan 15 minutos. La interfaz muestra un aviso breve cuando usa el respaldo. Si también aparece «Modo sin IA», Gemini no participó en esa solicitud: comprueba `GEMINI_API_KEY` en las variables del despliegue Vercel y vuelve a desplegar; `.env.local` solo configura el equipo local.
 
 Copia `.env.example` a `.env.local`, agrega una clave de un proyecto **Free tier sin facturación habilitada** y reinicia:
 
@@ -116,7 +118,7 @@ SDK oficial `@google/genai`, Interactions API y JSON validado con Zod. Flujo:
 3. El chat recibe nombres e IDs de hasta 75 registros consultados (resultados más visitas conservadas). Solo se aceptan IDs conocidos mencionados explícitamente; la IA no agrega sus recomendaciones por cuenta propia.
 4. El itinerario se construye con las visitas aceptadas y su orden. La búsqueda posterior conserva esa selección. La cuenta guarda también los IDs aceptados, sin requerir cambios a la tabla JSON de Supabase.
 
-Las etiquetas OSM y los mensajes se tratan como datos no confiables para instrucciones. «Ver foto del lugar» consulta Wikimedia Commons: utiliza los vínculos OSM a Commons/Wikidata o una entidad con nombre idéntico y coordenadas a menos de 200 m. Solo muestra imágenes CC BY, CC BY-SA, CC0 o dominio público con autor, licencia y enlace de origen; no sustituye una foto por otra cercana. La consulta es a petición, con caché de 24 horas y límites de frecuencia. Muchos cafés y negocios no tienen fotos libres: se ofrece Google Maps como enlace externo. No se usa Google Places ni se copian fotos de Google.
+Las etiquetas OSM y los mensajes se tratan como datos no confiables para instrucciones. «Ver foto del lugar» consulta Wikimedia Commons: utiliza los vínculos OSM a Commons/Wikidata o una entidad con nombre idéntico y coordenadas a menos de 200 m. Solo muestra imágenes CC BY, CC BY-SA, CC0 o dominio público con autor, licencia y enlace de origen; no sustituye una foto por otra cercana. La consulta es a petición, con caché de 24 horas y límites de frecuencia. Muchos cafés y negocios no tienen fotos libres: se ofrece Google Maps como enlace externo. El modo Google usa Places API y muestra sus fotos con atribucion, sin descargarlas al servidor; consulta docs/google-maps.md.
 
 Gemini: sin reintentos ni continuaciones automáticas, hasta 6 llamadas/minuto y 60 por ventana de 24 horas por instancia. Cada mensaje utiliza como máximo una llamada de interpretación. Añadir, quitar o reordenar con botones no consume Gemini. El código no puede comprobar la facturación de tu clave: conserva el proyecto de Google sin billing para que exceder la cuota no implique cobros. No se usa Google Places, grounding de pago ni pagos. Evita datos personales: el nivel gratuito de Google puede usar mensajes para mejorar productos. Condiciones y privacidad en `/fuentes`.
 

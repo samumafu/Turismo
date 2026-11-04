@@ -9,6 +9,8 @@ import {
 } from "@/lib/places";
 import { HttpError } from "./guard";
 import { requestPhoton } from "./photon";
+import { usesGoogleMaps } from "@/lib/maps-config";
+import { resolveGoogleReference } from "./google-maps";
 
 const featureSchema = z.object({
   geometry: z.object({
@@ -106,6 +108,7 @@ export function normalizeReference(data: unknown): Reference {
 export async function resolveSearchReference(
   spec: SearchSpec,
 ): Promise<SearchSpec> {
+  if (usesGoogleMaps()) return resolveGoogleReference(spec);
   if (!spec.near?.trim())
     return { ...spec, near: undefined, reference: undefined };
   const key = normalize(referenceUrl(spec).searchParams.get("q")!);
