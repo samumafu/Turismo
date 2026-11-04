@@ -60,3 +60,10 @@ En Vercel deben seguir configuradas `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SU
 5. Un enlace vencido debe mostrar un error útil, sin afirmar que confirmó el correo. La página de recuperación sin enlace válido no muestra el formulario.
 
 No desactives Confirm email para resolver errores SMTP. Revisa primero los Auth Logs de Supabase y los Transactional Logs de Brevo.
+
+## Si el botón abre la app sin iniciar sesión
+
+- `#error=access_denied&error_code=otp_expired` significa que Supabase rechazó un enlace usado o vencido. La app abre el acceso con el error real. Si ya confirmaste el correo, inicia sesión con tu contraseña; reenviar una confirmación de una cuenta ya confirmada no crea otra sesión.
+- Un retorno a `localhost` se procesa en la app local, que necesita sus propias variables `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`. Las variables de Vercel no configuran tu computadora. La clave pública debe corresponder al mismo proyecto que emitió el correo.
+- Si esperabas volver a Vercel, pon **Site URL** en `https://turismo-seven-mu.vercel.app` y autoriza sus dos callbacks. El origen donde queda guardada la sesión es el que abre el navegador; una sesión en localhost no inicia sesión en el dominio de Vercel.
+- Tanto `/` como `/planificar` procesan retornos de sesión y errores. Si la sesión es válida, se conserva al recargar. Los retornos de recuperación a esas rutas se transfieren a `/auth/recuperar` antes de consumir el fragmento.

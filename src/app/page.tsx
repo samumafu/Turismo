@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
-export default function Home() {
-  redirect("/planificar");
-}
+// Supabase can return to its configured Site URL (/). Render the planner here
+// too so the browser can consume the session/error fragment before navigation.
+export { default, metadata } from "./planificar/page";

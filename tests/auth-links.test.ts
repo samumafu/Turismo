@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { completeEmailLink } from "../src/lib/auth-links";
+import { completeEmailLink, readEmailReturn } from "../src/lib/auth-links";
 
 type Auth = Parameters<typeof completeEmailLink>[0];
 const href = (type: string) =>
@@ -15,6 +15,10 @@ function auth(
       return checks;
     },
     client: {
+      setSession: async () => ({
+        data: { session: null },
+        error: new Error("Invalid return"),
+      }),
       getSession: async () => ({
         data: {
           session: { access_token: options.token ?? "returned-session" },
@@ -73,6 +77,38 @@ test("email links require matching returned sessions and server-verified confirm
     ).ok,
     false,
   );
+});
+
+test("callbacks on the Site URL expose expired links and establish a fresh session on an existing client", async () => {
+  const incoming = readEmailReturn(
+    "http://localhost:3000/planificar#error=access_denied&error_code=otp_expired&error_description=private",
+  );
+  assert.equal(incoming.kind, "error");
+  assert.match(JSON.stringify(incoming), /ya fue utilizado o venció/);
+  assert.doesNotMatch(JSON.stringify(incoming), /private/);
+  assert.deepEqual(
+    readEmailReturn(
+      "https://turismo.example/#access_token=a&refresh_token=b&type=recovery",
+    ),
+    { kind: "session", purpose: "recovery" },
+  );
+  let established = 0;
+  const client = auth().client;
+  client.getSession = (async () => ({
+    data: { session: null },
+    error: null,
+  })) as Auth["getSession"];
+  client.setSession = (async (tokens: {
+    access_token: string;
+    refresh_token: string;
+  }) => {
+    established++;
+    return { data: { session: tokens }, error: null };
+  }) as Auth["setSession"];
+  assert.deepEqual(await completeEmailLink(client, href("signup"), "signup"), {
+    ok: true,
+  });
+  assert.equal(established, 1);
 });
 
 test("password recovery requires a recovery return, never a signup link or a stale login", async () => {

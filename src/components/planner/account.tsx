@@ -9,7 +9,12 @@ import {
   passwordRecoveryEnabled,
 } from "@/lib/supabase";
 import { authErrorMessage } from "@/lib/auth-errors";
-import { emailConfirmationPath, passwordRecoveryPath } from "@/lib/auth-links";
+import {
+  completeEmailLink,
+  emailConfirmationPath,
+  passwordRecoveryPath,
+  readEmailReturn,
+} from "@/lib/auth-links";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -21,6 +26,7 @@ const pendingJourneyKey = "turismo-narino:pending-registration";
 export function Account() {
   const { state, actions } = usePlanner();
   const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(accountsConfigured);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<FormMode>("login");
   const [email, setEmail] = useState("");
@@ -80,12 +86,62 @@ export function Account() {
   }, []);
 
   useEffect(() => {
+    const initialUrl = new URL(window.location.href);
+    const incoming = readEmailReturn(initialUrl.href);
+    if (incoming.kind === "session" && incoming.purpose === "recovery") {
+      window.location.replace(
+        passwordRecoveryPath + initialUrl.search + initialUrl.hash,
+      );
+      return;
+    }
     const supabase = browserSupabase();
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => {
+    let active = true;
+    if (!supabase) {
+      if (incoming.kind !== "none")
+        queueMicrotask(() => {
+          if (!active) return;
+          setOpen(true);
+          setMessage(
+            "No se pudo conectar con las cuentas en este sitio. Revisa la configuración de Supabase.",
+          );
+        });
+      return () => {
+        active = false;
+      };
+    }
+    void (async () => {
+      const completed =
+        incoming.kind === "session"
+          ? await completeEmailLink(supabase.auth, initialUrl.href, "signup")
+          : null;
+      const { data, error } = await supabase.auth.getSession();
+      if (!active) return;
       const nextUser = data.session?.user ?? null;
       setUser(nextUser);
+      setAuthLoading(false);
       const url = new URL(window.location.href);
+      if (incoming.kind !== "none") {
+        url.hash = "";
+        for (const key of ["error", "error_code", "error_description"])
+          url.searchParams.delete(key);
+        window.history.replaceState(
+          window.history.state,
+          "",
+          url.pathname + url.search,
+        );
+      }
+      if (incoming.kind === "error") {
+        setOpen(true);
+        setMessage(incoming.message);
+      } else if (completed && !completed.ok) {
+        setOpen(true);
+        setMessage(completed.message);
+      } else if (completed?.ok && nextUser) {
+        setMessage("Correo confirmado. Tu cuenta ya está lista.");
+      } else if (error) {
+        setOpen(true);
+        setMessage(authErrorMessage(error, "login"));
+      }
       if (nextUser?.email_confirmed_at && url.searchParams.has("correo")) {
         setMessage(
           url.searchParams.get("correo") === "recuperado"
@@ -109,6 +165,13 @@ export function Account() {
           url.pathname + url.search + url.hash,
         );
       }
+    })().catch(() => {
+      if (!active) return;
+      setAuthLoading(false);
+      setOpen(true);
+      setMessage(
+        "No pudimos conectar con el servicio de cuentas. Revisa tu conexión y vuelve a intentar.",
+      );
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
@@ -117,7 +180,10 @@ export function Account() {
         setMode("login");
       }
     });
-    return () => data.subscription.unsubscribe();
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -340,12 +406,17 @@ export function Account() {
     <div className="account-area">
       <Button
         variant="outline"
+        disabled={authLoading}
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls="account-panel"
       >
         <UserRound data-icon="inline-start" aria-hidden="true" />{" "}
-        {user ? "Mi cuenta" : "Iniciar sesión"}
+        {authLoading
+          ? "Comprobando sesión…"
+          : user
+            ? "Mi cuenta"
+            : "Iniciar sesión"}
       </Button>
       {open ? (
         <section

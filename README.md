@@ -15,7 +15,7 @@ npm run dev
 
 Abre http://localhost:3000/planificar. Copia solo los comandos, sin `PS ...>`. No hace falta una clave para buscar o planificar por reglas, pero sí conexión a un proveedor de búsqueda OSM.
 
-La única experiencia principal está en `/planificar`; `/` redirige allí y la antigua página `/destinos` fue eliminada. Gemini decide si explorar, pedir información o planificar, y traduce la conversación a filtros permitidos y datos del viaje. Puedes cambiar zona, categoría, radio, presupuesto, días, acompañantes o transporte conversando. Buscar lugares no exige completar un itinerario.
+La experiencia principal está en `/planificar`; `/` representa el mismo planificador y procesa también los retornos de correo enviados al Site URL. La antigua página `/destinos` fue eliminada. Gemini decide si explorar, pedir información o planificar, y traduce la conversación a filtros permitidos y datos del viaje. Puedes cambiar zona, categoría, radio, presupuesto, días, acompañantes o transporte conversando. Buscar lugares no exige completar un itinerario.
 
 Los filtros manuales y la exploración del mapa se cargan únicamente al abrir **Búsqueda avanzada**. Allí puedes elegir zona, categoría y radio, paginar o pulsar **Buscar en esta zona del mapa**. No se consulta al escribir ni al arrastrar.
 

@@ -20,7 +20,12 @@ export function browserSupabase() {
   client =
     url && key
       ? createClient(url, key, {
-          auth: { flowType: "implicit", detectSessionInUrl: true },
+          auth: {
+            flowType: "implicit",
+            detectSessionInUrl: true,
+            persistSession: true,
+            autoRefreshToken: true,
+          },
         })
       : null;
   return client;

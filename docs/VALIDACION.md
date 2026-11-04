@@ -1,5 +1,13 @@
 # Cambio a descubrimiento dinámico · 2 de noviembre de 2026
 
+## Retornos al Site URL y configuración local de cuentas
+
+La URL reportada contenía `otp_expired` y apuntaba a localhost. Los logs reales de Supabase incluyeron `One-time token not found`; esto verifica un rechazo del enlace, sin probar si expiró por tiempo o por uso previo. `.env.local` no tenía URL ni clave pública de Supabase: se completaron con los valores públicos del proyecto conectado, manteniendo el archivo ignorado por Git. No se modificaron usuarios, contraseñas, SMTP ni la configuración administrativa de Auth.
+
+`/` ahora representa el planificador y procesa retornos igual que `/planificar`. Un enlace válido establece la sesión aun si el cliente ya existía. Un enlace rechazado abre el formulario de acceso y explica cómo continuar. Los retornos de recuperación llegan a su formulario específico antes de consumir tokens. El acceso indica que comprueba la sesión durante la carga inicial y la conserva al recargar.
+
+Chrome reprodujo la URL exacta del usuario contra el servidor local real y mostró el error y el formulario. Con SDK real y respuestas HTTP simuladas se verificaron confirmación al volver a `/`, sesión tras recargar, cierre de sesión tras recargar, acceso con contraseña y recuperación desde `/`. Cuatro pruebas acotadas de Auth, TypeScript y lint aprobaron; Next Dev Tools sin errores. La autenticación real con contraseña y el primer uso de un nuevo correo siguen pendientes de la comprobación del usuario; no se solicitaron ni utilizaron sus contraseñas.
+
 ## Confirmación y recuperación mediante enlaces
 
 Se retiraron los formularios y verificaciones de códigos. Registro y reenvío envían `emailRedirectTo=/auth/confirmar`; la recuperación envía `redirectTo=/auth/recuperar`. Las dos plantillas usan `{{ .ConfirmationURL }}`. La confirmación comprueba con Supabase el usuario de la sesión devuelta y abre el planificador. La recuperación solo muestra los dos campos de contraseña al recibir una sesión de recuperación válida. Se limpian los tokens del fragmento de URL al terminar. Un enlace vencido o ausente no se presenta como confirmación exitosa.
