@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { Map, List, SlidersHorizontal } from "lucide-react";
+import { Map, List, MessageCircle, SlidersHorizontal } from "lucide-react";
 import { PlannerProvider, usePlanner } from "./provider";
 import { ChatPanel } from "./chat";
 import { ItineraryPanel } from "./itinerary";
@@ -46,6 +46,18 @@ function Workspace() {
         </div>
         <Account />
       </div>
+      <nav
+        className="workspace-navigation"
+        aria-label="Ir a una sección del planificador"
+      >
+        <Button variant="outline" render={<a href="#chat-viaje" />}>
+          <MessageCircle aria-hidden="true" /> Conversar
+        </Button>
+        <Button variant="outline" render={<a href="#mi-itinerario" />}>
+          <Map aria-hidden="true" /> Ver mapa
+          {state.results.length ? ` (${state.results.length})` : ""}
+        </Button>
+      </nav>
       <div className="planner-layout">
         <ChatPanel />
         <div className="journey-panel" id="mi-itinerario">
@@ -60,6 +72,9 @@ function Workspace() {
                   Itinerario
                 </TabsTrigger>
               </TabsList>
+              <a className="mobile-chat-link" href="#chat-viaje">
+                Volver al chat
+              </a>
             </div>
             <TabsContent value="itinerary">
               <ItineraryPanel />

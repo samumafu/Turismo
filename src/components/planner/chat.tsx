@@ -44,7 +44,11 @@ export function ChatPanel() {
     if (!sent) setDraft(message);
   }
   return (
-    <section className="chat-panel" aria-labelledby="chat-title">
+    <section
+      className="chat-panel"
+      id="chat-viaje"
+      aria-labelledby="chat-title"
+    >
       <div className="chat-panel-heading">
         <div className="guide-symbol">
           <Compass aria-hidden="true" />

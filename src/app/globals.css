@@ -46,7 +46,7 @@
 }
 .map-route-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 14px;
   margin-block: 18px;
 }
@@ -82,7 +82,7 @@
 }
 .discovery-filters {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 0.65fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.65fr) auto;
   gap: 16px;
   align-items: end;
 }
@@ -97,7 +97,7 @@
 }
 .discovery-layout {
   display: grid;
-  grid-template-columns: 1fr 1.15fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 35px;
   margin-top: 25px;
   align-items: start;
@@ -180,6 +180,7 @@
 }
 .discovery-result-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -229,6 +230,7 @@
 }
 .discovery-pagination {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding-top: 22px;
@@ -259,13 +261,13 @@
     order: -1;
   }
   .discovery-filters {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .discovery-intro h2 {
     font-size: 30px;
   }
   .discovery-map {
-    height: 360px;
+    height: clamp(280px, 55svh, 440px);
   }
   .discovery-selection a {
     white-space: normal;
@@ -475,6 +477,13 @@
   font-size: 11px;
   margin-top: 4px;
 }
+.workspace-top > div:first-child {
+  min-width: 0;
+}
+.workspace-navigation,
+.mobile-chat-link {
+  display: none;
+}
 .account-area {
   position: relative;
   flex-shrink: 0;
@@ -490,6 +499,9 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   box-shadow: 0 14px 36px #132a2524;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .account-panel h2 {
   font-size: 29px;
@@ -582,8 +594,9 @@
   border-radius: 7px;
   display: flex;
   flex-direction: column;
-  height: calc(100svh - 230px);
-  min-height: 610px;
+  height: clamp(480px, calc(100dvh - 230px), 900px);
+  min-height: 0;
+  min-width: 0;
   position: sticky;
   top: 20px;
   overflow: hidden;
@@ -594,6 +607,10 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-shrink: 0;
+}
+.chat-panel-heading > div {
+  min-width: 0;
 }
 .guide-symbol {
   background: var(--secondary);
@@ -626,7 +643,7 @@
 }
 .chat-thread {
   flex: 1;
-  min-height: 120px;
+  min-height: 0;
   overflow: hidden;
 }
 .message-text {
@@ -637,10 +654,14 @@
 }
 .chat-feedback {
   padding: 0 16px 10px;
+  max-height: 30%;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 .chat-composer {
   padding: 16px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .composer-hint {
   font-size: 10px;
@@ -655,6 +676,7 @@
   border: 1px solid var(--border);
   border-radius: 7px;
   overflow: hidden;
+  scroll-margin-top: 16px;
 }
 .journey-toolbar {
   display: flex;
@@ -662,6 +684,8 @@
   align-items: center;
   padding: 17px 23px;
   border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .journey-toolbar > span {
   font-size: 10px;
@@ -847,6 +871,7 @@
   font-family: var(--font-display);
   letter-spacing: -0.025em;
   margin-block: 7px 10px;
+  overflow-wrap: anywhere;
 }
 .stop-place p {
   font-size: 12px;
@@ -953,7 +978,7 @@
 .google-map {
   width: 100%;
   height: 100%;
-  min-height: 480px;
+  min-height: 0;
 }
 .google-place-marker {
   border: 2px solid white;
@@ -981,7 +1006,8 @@
 }
 .google-place-popup {
   color: #1b2828;
-  max-width: 250px;
+  max-width: min(250px, calc(100vw - 100px));
+  overflow-wrap: anywhere;
 }
 .google-place-popup a {
   text-decoration: underline;
@@ -993,7 +1019,7 @@
 .mobile-plan-link {
   display: none;
 }
-@media (max-width: 760px) {
+@media (max-width: 960px) {
   .mobile-plan-link {
     display: block;
     font-size: 12px;
@@ -1115,7 +1141,7 @@
     padding-inline: 20px;
   }
   .planner-layout {
-    grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-columns: minmax(290px, 330px) minmax(0, 1fr);
     gap: 14px;
   }
   .itinerary-panel {
@@ -1134,6 +1160,60 @@
   }
   .journey-toolbar > span {
     display: none;
+  }
+}
+@media (max-width: 960px) {
+  .planner-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .workspace-navigation {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .workspace-navigation > a {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+  .mobile-chat-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 12px;
+    text-decoration: underline;
+  }
+  .chat-panel {
+    height: clamp(420px, 70dvh, 620px);
+    position: static;
+    scroll-margin-top: 16px;
+  }
+  .workspace input,
+  .workspace textarea,
+  .workspace select {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+  .workspace [data-slot="button"],
+  .workspace [data-slot="tabs-trigger"],
+  .map-pick-button {
+    min-height: 44px;
+    max-width: 100%;
+    white-space: normal;
+    height: auto;
+    padding-block: 10px;
+  }
+  .workspace button[aria-label] {
+    min-width: 44px;
+  }
+  .google-place-marker {
+    width: 44px;
+    height: 44px;
+  }
+  .map-heading select {
+    width: 100%;
   }
 }
 @media (max-width: 760px) {
@@ -1168,7 +1248,9 @@
     flex-basis: 100%;
   }
   .planner-page {
-    padding: 24px 14px 35px;
+    padding: 24px max(14px, env(safe-area-inset-right))
+      max(35px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
   }
   .workspace-top {
     align-items: flex-start;
@@ -1176,20 +1258,7 @@
     gap: 12px;
   }
   .workspace-top h1 {
-    font-size: 30px;
-  }
-  .planner-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-  .planner-layout .journey-panel {
-    order: -1;
-  }
-  .chat-panel {
-    height: 670px;
-    min-height: 0;
-    max-height: 85svh;
-    position: static;
+    font-size: clamp(25px, 5.5vw, 30px);
   }
   .chat-panel-heading {
     padding: 16px;
@@ -1356,5 +1425,21 @@
   }
   .place-option > div {
     width: 100%;
+  }
+  .place-option > button {
+    width: 100%;
+  }
+  .discovery-filters,
+  .journey-panel .discovery-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .itinerary-heading {
+    flex-wrap: wrap;
+  }
+  .journey-toolbar {
+    padding: 12px 16px;
+  }
+  .account-panel {
+    padding: 20px;
   }
 }

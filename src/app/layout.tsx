@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   description:
     "Descubre Pasto y Nariño. Diseña un itinerario a tu ritmo con IA, lugares documentados y mapas abiertos. Turismo Inteligente Pasto, prototipo universitario.",
   applicationName: "Turismo Inteligente Pasto",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

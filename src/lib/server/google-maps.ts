@@ -77,7 +77,8 @@ const rawPlaceSchema = z.object({
       z.object({
         longText: z.string().optional(),
         shortText: z.string().optional(),
-        types: z.array(z.string()),
+        // Places can omit empty repeated fields, including address types.
+        types: z.array(z.string()).default([]),
       }),
     )
     .default([]),
@@ -103,6 +104,17 @@ const rawPlaceSchema = z.object({
 });
 type RawPlace = z.infer<typeof rawPlaceSchema>;
 let pausedUntil = 0;
+
+function parseGoogleResponse<T>(schema: z.ZodType<T>, data: unknown): T {
+  const parsed = schema.safeParse(data);
+  if (!parsed.success)
+    throw new HttpError(
+      503,
+      "Google Maps devolvió una respuesta incompleta. Intenta de nuevo.",
+      30,
+    );
+  return parsed.data;
+}
 
 export async function googleRequest(
   path: string,
@@ -328,44 +340,43 @@ export async function discoverGooglePlaces(
   const [latitude, longitude] = spec.center ?? searchZones[spec.zone].center;
   const dy = spec.radius / 111000;
   const dx = dy / Math.cos((latitude * Math.PI) / 180);
-  const data = z
-    .object({
+  const data = parseGoogleResponse(
+    z.object({
       places: z.array(z.unknown()).max(20).default([]),
       nextPageToken: z.string().max(4096).optional(),
-    })
-    .parse(
-      await googleRequest(
-        "places:searchText",
-        [...fields.map((f) => `places.${f}`), "nextPageToken"].join(","),
-        {
-          textQuery: `${spec.name || spec.categories.map((c) => categoryLabels[c]).join(" o ")}${spec.regionalFood ? " comida típica" : ""}${spec.center ? " en " : ` en ${searchZones[spec.zone].label}, `}Nariño, Colombia`,
-          languageCode: "es",
-          regionCode: "CO",
-          pageSize: 20,
-          ...(spec.name
-            ? {
-                locationBias: {
-                  circle: {
-                    center: { latitude, longitude },
-                    radius: spec.radius,
+    }),
+    await googleRequest(
+      "places:searchText",
+      [...fields.map((f) => `places.${f}`), "nextPageToken"].join(","),
+      {
+        textQuery: `${spec.name || spec.categories.map((c) => categoryLabels[c]).join(" o ")}${spec.regionalFood ? " comida típica" : ""}${spec.center ? " en " : ` en ${searchZones[spec.zone].label}, `}Nariño, Colombia`,
+        languageCode: "es",
+        regionCode: "CO",
+        pageSize: 20,
+        ...(spec.name
+          ? {
+              locationBias: {
+                circle: {
+                  center: { latitude, longitude },
+                  radius: spec.radius,
+                },
+              },
+            }
+          : {
+              locationRestriction: {
+                rectangle: {
+                  low: { latitude: latitude - dy, longitude: longitude - dx },
+                  high: {
+                    latitude: latitude + dy,
+                    longitude: longitude + dx,
                   },
                 },
-              }
-            : {
-                locationRestriction: {
-                  rectangle: {
-                    low: { latitude: latitude - dy, longitude: longitude - dx },
-                    high: {
-                      latitude: latitude + dy,
-                      longitude: longitude + dx,
-                    },
-                  },
-                },
-              }),
-          ...(pageToken ? { pageToken } : {}),
-        },
-      ),
-    );
+              },
+            }),
+        ...(pageToken ? { pageToken } : {}),
+      },
+    ),
+  );
   const observedAt = new Date().toISOString();
   const places = [
     ...new Map(
@@ -409,23 +420,26 @@ export async function resolveGoogleReference(
   if (!spec.near?.trim())
     return { ...spec, near: undefined, reference: undefined };
   rateLimit("google:search", 10, 60000);
-  const data = z
-    .object({ places: z.array(rawPlaceSchema).max(5).default([]) })
-    .parse(
-      await googleRequest(
-        "places:searchText",
-        ["id", "displayName", "location", "addressComponents"]
-          .map((f) => `places.${f}`)
-          .join(","),
-        {
-          textQuery: `${spec.near} ${searchZones[spec.zone].label}, Nariño, Colombia`,
-          languageCode: "es",
-          regionCode: "CO",
-          pageSize: 5,
-        },
-      ),
-    );
-  const matches = data.places.filter((p) => locationOf(p));
+  const data = parseGoogleResponse(
+    z.object({ places: z.array(z.unknown()).max(5).default([]) }),
+    await googleRequest(
+      "places:searchText",
+      ["id", "displayName", "location", "addressComponents"]
+        .map((f) => `places.${f}`)
+        .join(","),
+      {
+        textQuery: `${spec.near} ${searchZones[spec.zone].label}, Nariño, Colombia`,
+        languageCode: "es",
+        regionCode: "CO",
+        pageSize: 5,
+      },
+    ),
+  );
+  // One incomplete candidate must not prevent using the other valid matches.
+  const matches = data.places.flatMap((value) => {
+    const place = rawPlaceSchema.safeParse(value);
+    return place.success && locationOf(place.data) ? [place.data] : [];
+  });
   if (!matches.length)
     throw new HttpError(
       422,
@@ -452,14 +466,13 @@ export async function googlePlacePhoto(place: Place) {
   if (!place.googlePhoto.name.startsWith(`places/${place.id.slice(7)}/photos/`))
     throw new HttpError(400, "La foto no corresponde al lugar.");
   rateLimit("google:photos", 10, 60000);
-  const data = z
-    .object({ photoUri: z.string().url() })
-    .parse(
-      await googleRequest(
-        `${place.googlePhoto.name}/media?maxWidthPx=640&skipHttpRedirect=true`,
-        "",
-      ),
-    );
+  const data = parseGoogleResponse(
+    z.object({ photoUri: z.string().url() }),
+    await googleRequest(
+      `${place.googlePhoto.name}/media?maxWidthPx=640&skipHttpRedirect=true`,
+      "",
+    ),
+  );
   const url = new URL(data.photoUri);
   if (
     url.protocol !== "https:" ||
