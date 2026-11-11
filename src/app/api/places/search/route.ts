@@ -1,12 +1,12 @@
-import { interpretSearch, searchRequestSchema } from "@/lib/places";
-import { discoverPlaces } from "@/lib/server/discovery";
+import { interpretSearch, searchRequestSchema, normalize } from "@/lib/places";
+import { discoverReachablePlaces } from "@/lib/server/route-discovery";
 import {
   errorResponse,
   guardRequest,
   HttpError,
   readJson,
 } from "@/lib/server/guard";
-export const maxDuration = 40;
+export const maxDuration = 75;
 export async function POST(request: Request) {
   try {
     guardRequest(request, "discovery");
@@ -16,16 +16,19 @@ export async function POST(request: Request) {
     if (!parsed.success)
       throw new HttpError(
         400,
-        "Revisa la zona, categoría y radio (entre 500 m y 25 km).",
+        "Revisa la zona, categoría y distancia (entre 100 m y 25 km).",
       );
     const { text, spec, pageToken } = parsed.data;
-    return Response.json(
-      await discoverPlaces(
-        text ? interpretSearch(text, spec) : spec,
-        pageToken,
-      ),
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    const filters = text ? interpretSearch(text, spec) : spec;
+    // The numeric field is authoritative unless the text supplies a distance.
+    if (
+      text &&
+      !/\d+(?:[.,]\d+)?\s*(?:km|kilometros?|metros?|m)\b/i.test(normalize(text))
+    )
+      filters.radius = spec.radius;
+    return Response.json(await discoverReachablePlaces(filters, pageToken), {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (error) {
     return errorResponse(error);
   }

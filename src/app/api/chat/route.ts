@@ -5,11 +5,12 @@ import {
   interpretSearch,
   searchSpecSchema,
   normalize,
-  haversine,
+  formatTravel,
   searchZones,
   categoryLabels,
 } from "@/lib/places";
-import { discoverPlaces, resolvePlaces } from "@/lib/server/discovery";
+import { resolvePlaces } from "@/lib/server/discovery";
+import { discoverReachablePlaces } from "@/lib/server/route-discovery";
 import { isVerifiedPlace } from "@/lib/server/place-verification";
 import { resolveSearchReference } from "@/lib/server/search-reference";
 import {
@@ -87,6 +88,26 @@ export async function POST(request: Request) {
         notice = geminiFailureNotice(error);
       }
     }
+    // Keep explicit distances and category combinations even if the model rounds.
+    const explicit = interpretSearch(last, search);
+    search = {
+      ...search,
+      radius: explicit.radius,
+      travelMode: explicit.travelMode,
+      categories: explicit.categories,
+      ...(explicit.categories.length > 1
+        ? { categories: explicit.categories, name: "" }
+        : {}),
+    };
+    if (
+      input.origin?.confirmed &&
+      /cerca|cercan|aqui|mi ubicacion/.test(text) &&
+      !search.near &&
+      !Object.values(searchZones).some((zone) =>
+        text.includes(normalize(zone.label.split(" / ")[0])),
+      )
+    )
+      search.center = input.origin.coordinates;
     if (selectionIntent && !add.length && !remove.length) {
       const matches = known
         .filter((p) => text.includes(normalize(p.name)))
@@ -189,7 +210,11 @@ export async function POST(request: Request) {
         message: origin
           ? "Encontré tu punto de partida. Confírmalo en el mapa para usarlo en la ruta."
           : mode === "gemini"
-            ? message
+            ? /\b\d+(?:[.,]\d+)?\s*(?:km|kilometros?|metros?)\b|linea recta/.test(
+                normalize(message),
+              )
+              ? "Para comprobar la distancia por calles, dime desde dónde sales y a qué lugar quieres ir."
+              : message
             : "¿Qué te gustaría buscar? Puedes elegir los lugares antes de organizar tu recorrido.",
         profile: input.profile,
         itinerary,
@@ -202,7 +227,7 @@ export async function POST(request: Request) {
         origin,
       });
     }
-    const found = await discoverPlaces(search);
+    const found = await discoverReachablePlaces(search);
     search = found.spec;
     const context =
       search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ") +
@@ -214,10 +239,11 @@ export async function POST(request: Request) {
       .map(
         (p) =>
           p.name +
-          (search.center
-            ? " (aprox. " +
-              Math.round(haversine(search.center, p.coordinates) / 10) * 10 +
-              " m en línea recta)"
+          (p.travel
+            ? " — " +
+              formatTravel(p.travel) +
+              " por calles desde " +
+              p.travel.originName
             : ""),
       )
       .join("; ");
@@ -229,7 +255,7 @@ export async function POST(request: Request) {
           context +
           ". " +
           suggestions +
-          ". Elige las que quieras visitar con Añadir a mi itinerario; solo esas formarán tu recorrido."
+          ". Elige las que quieras visitar y visualiza tu recorrido dentro de la app."
         : "No encontré coincidencias con estos filtros. Podemos ampliar el radio o cambiar la zona.",
       profile: input.profile,
       itinerary,

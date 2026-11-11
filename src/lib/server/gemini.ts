@@ -99,7 +99,7 @@ const intentSchema = z.object({
   message: z.string().min(1).max(1000),
   profile: profileSchema,
   zone: z.enum(zoneKeys),
-  radius: z.number().int().min(500).max(25000),
+  radius: z.number().int().min(100).max(25000),
   categories: z.array(z.enum(categoryKeys)).min(1).max(3),
   name: z.string().max(80),
   near: z.string().max(160).optional(),
@@ -129,11 +129,11 @@ Si ya hay acceptedIds y solicita ajustar horarios, duración o días, puedes dev
 action=explore cuando pide buscar, ver o conocer lugares, restaurantes, naturaleza o un nombre sin pedir agenda. NO exijas presupuesto, acompañantes, días ni transporte para explorar. Ejemplos: "restaurantes típicos en Ipiales", "lugares naturales alrededor de La Cocha", "Museo Taminango". Si hay itinerario previo y pide una búsqueda independiente, explore; si pide reemplazar o añadir paradas, plan.
 Separa siempre el destino del punto de referencia: "una cafetería cerca de la Universidad Cooperativa de Colombia campus Pasto" es explore, categories=["cafeterias"], name="", near="Universidad Cooperativa de Colombia Pasto", radio=1500 m. near es el nombre del punto alrededor del cual buscar, nunca coordenadas; el servidor lo geocodifica. No necesitas GPS ni perfil para esta búsqueda. Si no hay referencia nueva conserva previous.near salvo cambio de zona. No uses el nombre de la universidad como nombre de cafetería.
 action=plan organiza o modifica las visitas ya aceptadas; explorar sirve para buscar opciones nuevas. Actualiza el perfil conservando los datos conocidos y deja como null lo desconocido. Un saludo o una solicitud ambigua usa clarify. Para elegir visitas y crear un recorrido sencillo no exijas presupuesto, viajeros ni transporte. Puedes preguntar por datos concretos cuando sean necesarios para responder a lo que pide. Mensaje breve; no inventes resultados antes de consultar el buscador de lugares.
-Elige solo una zona y hasta 3 categorías permitidas. Conserva la búsqueda anterior al cambiar presupuesto o duración. Si cambia zona/categoría limpia el nombre anterior, salvo que solicite un nombre concreto. Los restaurantes típicos usan restaurantes y regionalFood=true. Nombres concretos en name, sin adornos; intereses generales con name vacío. Radio 500-25000 m, predeterminado previo. No inventes coordenadas.`,
+Elige solo una zona y hasta 3 categorías permitidas. Conserva la búsqueda anterior al cambiar presupuesto o duración. Si cambia zona/categoría limpia el nombre anterior, salvo que solicite un nombre concreto. Los restaurantes típicos usan restaurantes y regionalFood=true. Nombres concretos en name, sin adornos; intereses generales con name vacío. Distancia 100-25000 m, respeta exactamente la distancia que pida. Para "una cafetería y un parque cerca" devuelve ambas categorías, name vacío y radio 1500 si no indica otro; el servidor comprobará que estén conectados por rutas cortas. Nunca inventes distancias, minutos de traslado ni coordenadas. Las distancias solo las calcula Routes API.`,
     {
       zones: searchZones,
       allowedCategories: categoryKeys,
-      previous,
+      previous: { ...previous, center: undefined },
       previousProfile: input.profile,
       hasItinerary: !!input.itinerary,
       acceptedIds: input.selectedIds,
@@ -171,6 +171,7 @@ Elige solo una zona y hasta 3 categorías permitidas. Conserva la búsqueda ante
     originQuery,
     itinerary,
     search: {
+      travelMode: previous.travelMode,
       ...filters,
       near,
       ...(near &&

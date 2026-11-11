@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { ArrowUp, Compass, Info, LoaderCircle, RotateCcw } from "lucide-react";
+import { ArrowUp, Compass, Info, LoaderCircle, SquarePen } from "lucide-react";
 import { usePlanner } from "./provider";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -66,14 +66,15 @@ export function ChatPanel() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Iniciar un nuevo viaje"
+          aria-label="Iniciar nueva conversación"
+          title="Iniciar nueva conversación"
           disabled={state.busy}
           onClick={() => {
             actions.reset();
             setResetDone(true);
           }}
         >
-          <RotateCcw aria-hidden="true" />
+          <SquarePen aria-hidden="true" />
         </Button>
       </div>
       {resetDone ? (
@@ -160,6 +161,28 @@ export function ChatPanel() {
         </div>
       ) : null}
       <div className="chat-composer">
+        {state.messages.length === 1 ? (
+          <div className="chat-suggestions">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={state.busy}
+              onClick={() =>
+                void actions.send("Una cafetería y un parque cerca en Pasto")
+              }
+            >
+              Un café y un parque cerca
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={state.busy}
+              onClick={() => void actions.send("Museos en Pasto")}
+            >
+              Museos en Pasto
+            </Button>
+          </div>
+        ) : null}
         <form onSubmit={submit}>
           <FieldGroup>
             <Field>

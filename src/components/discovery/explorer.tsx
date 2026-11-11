@@ -1,184 +1,57 @@
 "use client";
-import dynamic from "next/dynamic";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
-import {
-  ArrowUpRight,
-  Search,
-  LoaderCircle,
-  Check,
-  MapPin,
-} from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Search, LoaderCircle } from "lucide-react";
 import {
   categoryKeys,
   categoryLabels,
-  interpretSearch,
-  mapsLink,
-  searchResponseSchema,
-  searchSpecSchema,
   searchZones,
   zoneKeys,
-  type SearchResponse,
   type SearchSpec,
 } from "@/lib/places";
+import { usePlanner } from "@/components/planner/provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { Viewport } from "./place-map";
-import { GoogleAttribution } from "./google-attribution";
-import { PlacePhoto } from "./place-photo";
-const PlaceMap = dynamic(() => import("./place-map"), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[480px] w-full" />,
-});
-export function DiscoveryExplorer({
-  onResults,
-  onUseSelection,
-}: {
-  onResults: (result: SearchResponse) => void;
-  onUseSelection: (ids: string[], search: SearchSpec) => void;
-}) {
-  const [spec, setSpec] = useState<SearchSpec>(searchSpecSchema.parse({}));
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from "@/components/ui/field";
+
+export function DiscoveryExplorer({ onComplete }: { onComplete: () => void }) {
+  const { state, actions } = usePlanner();
+  const [spec, setSpec] = useState<SearchSpec>(state.search);
   const [text, setText] = useState("");
-  const [result, setResult] = useState<SearchResponse | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [view, setView] = useState<Viewport | null>(null);
-  const controller = useRef<AbortController | null>(null);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const parsed = searchSpecSchema.safeParse({
-      zone: params.get("zona") || "pasto",
-      categories: [params.get("categoria") || "turismo"],
-    });
-    if (parsed.success)
-      queueMicrotask(() => {
-        setSpec(parsed.data);
-        setText(params.get("q") || "");
-      });
-    return () => controller.current?.abort();
-  }, []);
-  const toggle = useCallback(
-    (id: string) =>
-      setSelected((items) =>
-        items.includes(id)
-          ? items.filter((v) => v !== id)
-          : items.length < 5
-            ? [...items, id]
-            : items,
-      ),
-    [],
-  );
-  async function search(
-    next: SearchSpec = spec,
-    pageToken?: string,
-    input = text,
-  ) {
-    controller.current?.abort();
-    const current = new AbortController();
-    controller.current = current;
-    setBusy(true);
-    if (!pageToken) {
-      setSelected([]);
-      setResult(null);
-    }
-    setError(null);
-    try {
-      const response = await fetch("/api/places/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input, spec: next, pageToken }),
-        signal: AbortSignal.any([current.signal, AbortSignal.timeout(42000)]),
-      });
-      const body = await response.json();
-      if (!response.ok)
-        throw new Error(body.error ?? "No se pudo consultar Google Maps.");
-      const data = searchResponseSchema.parse(body);
-      if (current.signal.aborted) return;
-      const places =
-        pageToken && result
-          ? [
-              ...new Map(
-                [...result.places, ...data.places].map((p) => [p.id, p]),
-              ).values(),
-            ].slice(0, 60)
-          : data.places;
-      const combined = {
-        ...data,
-        places,
-        total: places.length,
-        nextPageToken: places.length >= 60 ? null : data.nextPageToken,
-      };
-      setResult(combined);
-      setSpec(data.spec);
-      onResults(combined);
-      const url = new URL(window.location.href);
-      url.search = new URLSearchParams({
-        zona: data.spec.zone,
-        categoria: data.spec.categories[0],
-        q: input,
-      }).toString();
-      window.history.replaceState(null, "", url);
-    } catch (e) {
-      if (!current.signal.aborted)
-        setError(
-          e instanceof Error
-            ? e.name === "TimeoutError"
-              ? "La búsqueda tardó demasiado. Espera un minuto y vuelve a intentar."
-              : e.message
-            : "La búsqueda no respondió. Vuelve a intentar.",
-        );
-    } finally {
-      if (!current.signal.aborted) setBusy(false);
-    }
+  const [distance, setDistance] = useState(String(state.search.radius));
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (await actions.searchPlaces({ ...spec, radius: Number(distance) }, text))
+      onComplete();
   }
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    setSelected([]);
-    void search(interpretSearch(text, spec));
-  }
-  const active = result?.spec ?? spec;
-  const center = [...(active.center ?? searchZones[active.zone].center)] as [
-    number,
-    number,
-  ];
   return (
     <section className="discovery" aria-labelledby="discovery-title">
       <div className="discovery-intro">
-        <h2 id="discovery-title">Encuentra tu próximo lugar</h2>
+        <h2 id="discovery-title">Busca a tu medida</h2>
         <p>
-          Explora lugares por zona, nombre o categoría. Puedes cargar más
-          resultados y abrir las fotos de los lugares que te interesen.
+          Ajusta la zona y la distancia. Verás los resultados en el mapa
+          principal.
         </p>
       </div>
       <form className="discovery-form" onSubmit={submit}>
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="place-search">
-              ¿Qué te gustaría encontrar?
+              Lugar o idea para tu viaje
             </FieldLabel>
             <Input
               id="place-search"
               name="place-search"
               autoComplete="off"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(event) => setText(event.target.value)}
               maxLength={300}
-              placeholder="Cascadas cerca de Pasto…"
+              placeholder="Una cafetería y un parque cerca…"
+              disabled={state.busy}
             />
           </Field>
           <FieldGroup className="discovery-filters">
@@ -186,18 +59,17 @@ export function DiscoveryExplorer({
               <FieldLabel htmlFor="search-zone">Zona</FieldLabel>
               <select
                 id="search-zone"
-                name="zone"
                 value={spec.zone}
-                onChange={(e) => {
+                disabled={state.busy}
+                onChange={(event) =>
                   setSpec({
                     ...spec,
-                    zone: e.target.value as SearchSpec["zone"],
+                    zone: event.target.value as SearchSpec["zone"],
                     center: undefined,
                     near: undefined,
                     reference: undefined,
-                  });
-                  setText("");
-                }}
+                  })
+                }
               >
                 {zoneKeys.map((key) => (
                   <option value={key} key={key}>
@@ -210,19 +82,18 @@ export function DiscoveryExplorer({
               <FieldLabel htmlFor="search-category">Categoría</FieldLabel>
               <select
                 id="search-category"
-                name="category"
                 value={spec.categories[0]}
-                onChange={(e) => {
+                disabled={state.busy}
+                onChange={(event) =>
                   setSpec({
                     ...spec,
                     categories: [
-                      e.target.value as SearchSpec["categories"][number],
+                      event.target.value as SearchSpec["categories"][number],
                     ],
-                    regionalFood: false,
                     name: "",
-                  });
-                  setText("");
-                }}
+                    regionalFood: false,
+                  })
+                }
               >
                 {categoryKeys.map((key) => (
                   <option key={key} value={key}>
@@ -232,205 +103,69 @@ export function DiscoveryExplorer({
               </select>
             </Field>
             <Field>
-              <FieldLabel htmlFor="search-radius">Radio</FieldLabel>
-              <select
+              <FieldLabel htmlFor="search-radius">
+                Distancia máxima (metros)
+              </FieldLabel>
+              <Input
                 id="search-radius"
                 name="radius"
-                value={spec.radius}
-                onChange={(e) =>
-                  setSpec({ ...spec, radius: Number(e.target.value) })
+                type="number"
+                min={100}
+                max={25000}
+                step={1}
+                required
+                value={distance}
+                disabled={state.busy}
+                onChange={(event) => setDistance(event.target.value)}
+              />
+              <FieldDescription>
+                Desde 100 m hasta 25 km por calles.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="search-travel-mode">
+                Cómo te desplazas
+              </FieldLabel>
+              <select
+                id="search-travel-mode"
+                value={spec.travelMode}
+                disabled={state.busy}
+                onChange={(event) =>
+                  setSpec({
+                    ...spec,
+                    travelMode: event.target.value as SearchSpec["travelMode"],
+                  })
                 }
               >
-                {![1000, 3000, 8000, 15000, 25000].includes(spec.radius) ? (
-                  <option value={spec.radius}>
-                    {(spec.radius / 1000).toFixed(1)} km (mapa)
-                  </option>
-                ) : null}
-                {[1000, 3000, 8000, 15000, 25000].map((r) => (
-                  <option key={r} value={r}>
-                    {r / 1000} km
-                  </option>
-                ))}
+                <option value="walking">A pie</option>
+                <option value="driving">En carro</option>
               </select>
             </Field>
-            <Button type="submit" disabled={busy}>
-              {busy ? (
-                <LoaderCircle data-icon="inline-start" aria-hidden="true" />
+          </FieldGroup>
+          <div className="discovery-submit">
+            <p>
+              Distancias desde{" "}
+              {spec.reference?.name ??
+                (spec.center
+                  ? "tu punto de búsqueda"
+                  : `el centro de ${searchZones[spec.zone].label}`)}
+              . Para cambiar el punto, indica una referencia en la búsqueda.
+            </p>
+            <Button type="submit" disabled={state.busy}>
+              {state.busy ? (
+                <LoaderCircle
+                  data-icon="inline-start"
+                  className="animate-spin"
+                  aria-hidden="true"
+                />
               ) : (
                 <Search data-icon="inline-start" aria-hidden="true" />
               )}
-              {busy ? "Buscando…" : "Buscar lugares"}
+              {state.busy ? "Buscando…" : "Buscar lugares"}
             </Button>
-          </FieldGroup>
+          </div>
         </FieldGroup>
       </form>
-      {error ? (
-        <Alert variant="destructive">
-          <AlertTitle>No se pudo completar la búsqueda</AlertTitle>
-          <AlertDescription>
-            {error}{" "}
-            <button className="inline-link" onClick={() => search()}>
-              Reintentar
-            </button>
-          </AlertDescription>
-        </Alert>
-      ) : null}
-      {busy ? (
-        <p role="status" className="discovery-status">
-          Consultando Google Maps por zona y categoría…
-        </p>
-      ) : null}
-      {result?.notice ? (
-        <Alert>
-          <AlertDescription>{result.notice}</AlertDescription>
-        </Alert>
-      ) : null}
-      <div className="discovery-layout">
-        <div className="discovery-results">
-          <div className="discovery-results-heading" aria-live="polite">
-            <strong>
-              {result
-                ? `${result.total} lugares encontrados`
-                : "Busca para descubrir lugares"}
-            </strong>
-          </div>
-          <GoogleAttribution places={result?.places ?? []} />
-          {result?.places.length ? (
-            <ol className="discovery-list">
-              {result.places.map((place, index) => (
-                <li key={place.id}>
-                  <article>
-                    <div className="discovery-result-top">
-                      <span>{index + 1}</span>
-                      <div>
-                        <small>{place.category}</small>
-                        <h3>{place.name}</h3>
-                      </div>
-                    </div>
-                    <p>{place.region}</p>
-                    <details>
-                      <summary>Datos y procedencia</summary>
-                      <p>{place.description}</p>
-                      <p>{place.note}</p>
-                      <p>
-                        Consulta horarios, tarifas y disponibilidad en la ficha
-                        del lugar.
-                      </p>
-                      <a
-                        href={place.sources[0].url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {place.id} <ArrowUpRight size={13} aria-hidden="true" />
-                      </a>
-                    </details>
-                    <PlacePhoto place={place} />
-                    <div className="discovery-result-actions">
-                      <a
-                        href={mapsLink(place)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Google Maps{" "}
-                        <ArrowUpRight size={13} aria-hidden="true" />
-                      </a>
-                      <Button
-                        size="sm"
-                        variant={
-                          selected.includes(place.id) ? "secondary" : "outline"
-                        }
-                        disabled={
-                          place.availability === "restringido" ||
-                          (!selected.includes(place.id) && selected.length >= 5)
-                        }
-                        onClick={() => toggle(place.id)}
-                      >
-                        {selected.includes(place.id) ? (
-                          <Check data-icon="inline-start" aria-hidden="true" />
-                        ) : null}
-                        {place.availability === "restringido"
-                          ? "Acceso restringido"
-                          : selected.includes(place.id)
-                            ? "Seleccionado"
-                            : "Añadir al viaje"}
-                      </Button>
-                    </div>
-                  </article>
-                </li>
-              ))}
-            </ol>
-          ) : !busy ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>
-                  {result
-                    ? "Sin coincidencias en esta zona"
-                    : "Busca lugares en el mapa"}
-                </EmptyTitle>
-                <EmptyDescription>
-                  {result
-                    ? "Cambia el radio, la categoría o el nombre. Puede faltar información de algunos lugares."
-                    : "Usa los filtros para buscar lugares en la zona que te interesa."}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <Skeleton className="h-48 w-full" />
-          )}
-          {result?.nextPageToken ? (
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() => search(result.spec, result.nextPageToken!, "")}
-            >
-              Ver más lugares
-            </Button>
-          ) : null}
-        </div>
-        <aside className="discovery-map-panel">
-          <PlaceMap
-            places={result?.places ?? []}
-            center={center}
-            radius={active.radius}
-            onMove={setView}
-            onSelect={toggle}
-          />
-          <Button
-            className="w-full mt-3"
-            variant="outline"
-            disabled={busy || !view}
-            onClick={() => {
-              if (view) {
-                setSelected([]);
-                void search(
-                  {
-                    ...spec,
-                    center: view.center,
-                    near: undefined,
-                    reference: undefined,
-                    radius: view.radius,
-                    name: "",
-                  },
-                  undefined,
-                  "",
-                );
-              }
-            }}
-          >
-            <MapPin data-icon="inline-start" aria-hidden="true" />
-            Buscar en esta zona del mapa
-          </Button>
-          {selected.length ? (
-            <div className="discovery-selection">
-              <strong>{selected.length} lugares seleccionados</strong>
-              <Button onClick={() => onUseSelection(selected, active)}>
-                Planear desde esta selección{" "}
-                <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
-              </Button>
-            </div>
-          ) : null}
-        </aside>
-      </div>
     </section>
   );
 }

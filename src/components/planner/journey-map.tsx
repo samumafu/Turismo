@@ -9,7 +9,12 @@ import {
   Route,
   X,
 } from "lucide-react";
-import { directionsLink, searchZones, type Place } from "@/lib/places";
+import {
+  directionsLink,
+  searchZones,
+  formatDistance,
+  type Place,
+} from "@/lib/places";
 import PlaceMap from "@/components/discovery/place-map";
 import { usePlanner } from "./provider";
 import { Button } from "@/components/ui/button";
@@ -26,6 +31,9 @@ const routeSchema = z.object({
   }),
   distanceMeters: z.number().nonnegative(),
   durationSeconds: z.number().nonnegative(),
+  steps: z
+    .array(z.object({ instruction: z.string(), distanceMeters: z.number() }))
+    .default([]),
 });
 type RoadRoute = z.infer<typeof routeSchema>;
 type Mode = "driving" | "walking" | "transit";
@@ -42,13 +50,25 @@ function RoutingMap({
   const { state, location, actions } = usePlanner();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>(
-    state.profile.transport === "a-pie"
-      ? "walking"
+    state.profile.transport === "carro"
+      ? "driving"
       : state.profile.transport === "publico"
         ? "transit"
-        : "driving",
+        : "walking",
   );
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const transport = state.profile.transport;
+    queueMicrotask(() =>
+      setMode(
+        transport === "carro"
+          ? "driving"
+          : transport === "publico"
+            ? "transit"
+            : "walking",
+      ),
+    );
+  }, [state.profile.transport]);
   const [response, setResponse] = useState<{
     query: string;
     data?: RoadRoute;
@@ -71,9 +91,12 @@ function RoutingMap({
       p.availability === "restringido" || (mode === "driving" && !p.roadAccess),
   );
   const query =
-    position && targets.length && mode !== "transit" && !blocked
+    (position || targets.length >= 2) &&
+    targets.length &&
+    mode !== "transit" &&
+    !blocked
       ? JSON.stringify({
-          origin: position.coordinates,
+          origin: position?.coordinates,
           placeIds: targets.map((p) => p.id),
           knownPlaces: targets,
           mode,
@@ -130,6 +153,7 @@ function RoutingMap({
     <>
       <div className="map-location-actions">
         <Button
+          variant="outline"
           onClick={() => {
             actions.clearOrigin();
             location.request();
@@ -184,8 +208,10 @@ function RoutingMap({
       ) : null}
       {!position && stops.length ? (
         <p className="map-note">
-          Activa tu ubicación o indica en el chat desde dónde saldrás, por
-          ejemplo «salgo desde la Universidad Cooperativa de Colombia en Pasto».
+          {stops.length >= 2
+            ? "El recorrido empieza en tu primera visita. Para incluir el trayecto desde donde estás, "
+            : "Para trazar la ruta hasta esta visita, "}
+          activa tu ubicación o indica en el chat desde dónde saldrás.
         </p>
       ) : null}
       {location.error && !state.origin?.confirmed ? (
@@ -258,7 +284,7 @@ function RoutingMap({
               />
             }
           >
-            Cómo llegar en Google Maps{" "}
+            Abrir en Google Maps{" "}
             <ArrowUpRight data-icon="inline-end" aria-hidden="true" />
           </Button>
         ) : null}
@@ -275,10 +301,9 @@ function RoutingMap({
         </p>
       ) : current?.data ? (
         <p className="map-note" aria-live="polite">
-          {(current.data.distanceMeters / 1000).toLocaleString("es-CO", {
-            maximumFractionDigits: 1,
-          })}{" "}
-          km · {Math.round(current.data.durationSeconds / 60)} min aprox.
+          {formatDistance(current.data.distanceMeters)} ·{" "}
+          {Math.max(1, Math.round(current.data.durationSeconds / 60))} min
+          aprox.
         </p>
       ) : blocked ? (
         <p className="map-note" aria-live="polite">
@@ -290,6 +315,19 @@ function RoutingMap({
           <AlertDescription>{current.error}</AlertDescription>
         </Alert>
       ) : null}
+      {current?.data?.steps.length ? (
+        <details className="route-directions">
+          <summary>Ver indicaciones del recorrido</summary>
+          <ol>
+            {current.data.steps.map((step, index) => (
+              <li key={index}>
+                <span>{step.instruction}</span>
+                <small>{formatDistance(step.distanceMeters)}</small>
+              </li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
       <p className="map-attribution" translate="no">
         Google Maps
       </p>
@@ -299,9 +337,12 @@ function RoutingMap({
 
 export default function JourneyMap() {
   const { state } = usePlanner();
-  const [day, setDay] = useState(0);
+  const { actions } = usePlanner();
   const itinerary = state.itinerary;
-  const selectedDay = Math.min(day, (itinerary?.days.length ?? 1) - 1);
+  const selectedDay = Math.min(
+    state.routeDay,
+    (itinerary?.days.length ?? 1) - 1,
+  );
   const stops = useMemo(() => {
     if (!itinerary) return [];
     const byId = new Map(state.places.map((p) => [p.id, p]));
@@ -309,16 +350,20 @@ export default function JourneyMap() {
       .map((s) => byId.get(s.placeId))
       .filter((p): p is Place => !!p);
   }, [itinerary, selectedDay, state.places]);
-  const places =
-    state.action === "explore"
-      ? [
-          ...new Map(
-            [...stops, ...state.results].map((p) => [p.id, p]),
-          ).values(),
-        ]
-      : stops.length
-        ? stops
-        : state.results;
+  const places = useMemo(() => {
+    if (state.routeRequest && stops.length) return stops;
+    if (
+      stops.every((place) =>
+        state.results.some((result) => result.id === place.id),
+      )
+    )
+      return state.results;
+    return [
+      ...new Map(
+        [...state.results, ...stops].map((place) => [place.id, place]),
+      ).values(),
+    ];
+  }, [state.results, state.routeRequest, stops]);
   return (
     <div className="map-panel">
       <div className="map-heading">
@@ -331,7 +376,7 @@ export default function JourneyMap() {
                 id="map-day"
                 name="map-day"
                 value={selectedDay}
-                onChange={(e) => setDay(Number(e.target.value))}
+                onChange={(e) => actions.showRoute(Number(e.target.value))}
               >
                 {itinerary.days.map((d, i) => (
                   <option key={d.day} value={i}>
@@ -343,12 +388,7 @@ export default function JourneyMap() {
           </FieldGroup>
         ) : null}
       </div>
-      <RoutingMap
-        key={`${selectedDay}:${state.profile.transport}:${itinerary ? "plan" : "explore"}`}
-        places={places}
-        planned={!!itinerary}
-        stops={stops}
-      />
+      <RoutingMap places={places} planned={!!itinerary} stops={stops} />
     </div>
   );
 }

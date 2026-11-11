@@ -10,6 +10,7 @@ import {
   searchZones,
   type Place,
   type SearchSpec,
+  type SearchResponse,
 } from "@/lib/places";
 import { HttpError, rateLimit } from "./guard";
 
@@ -135,7 +136,7 @@ export async function googleRequest(
       Math.ceil((pausedUntil - Date.now()) / 1000),
     );
   const url = path.startsWith("routes/")
-    ? `https://routes.googleapis.com/directions/v2:${path.slice(7)}`
+    ? `https://routes.googleapis.com/${path === "routes/computeRouteMatrix" ? "distanceMatrix" : "directions"}/v2:${path.slice(7)}`
     : `https://places.googleapis.com/v1/${path}`;
   try {
     const response = await fetch(url, {
@@ -335,7 +336,37 @@ export function normalizeGooglePlace(
 export async function discoverGooglePlaces(
   spec: SearchSpec,
   pageToken?: string,
-) {
+): Promise<SearchResponse> {
+  if (spec.categories.length > 1 && !spec.name) {
+    const results = await Promise.all(
+      spec.categories.map((category) =>
+        discoverGooglePlaces({ ...spec, categories: [category] }),
+      ),
+    );
+    const center = [...(spec.center ?? searchZones[spec.zone].center)];
+    const places = [
+      ...new Map(
+        results
+          .flatMap((result) =>
+            result.places
+              .sort(
+                (a, b) =>
+                  haversine(center, a.coordinates) -
+                  haversine(center, b.coordinates),
+              )
+              .slice(0, 8),
+          )
+          .map((place) => [place.id, place]),
+      ).values(),
+    ];
+    return {
+      ...results[0],
+      places,
+      total: places.length,
+      spec,
+      nextPageToken: null,
+    };
+  }
   rateLimit("google:search", 10, 60000);
   const [latitude, longitude] = spec.center ?? searchZones[spec.zone].center;
   const dy = spec.radius / 111000;
@@ -353,6 +384,7 @@ export async function discoverGooglePlaces(
         languageCode: "es",
         regionCode: "CO",
         pageSize: 20,
+        ...(!spec.name ? { rankPreference: "DISTANCE" } : {}),
         ...(spec.name
           ? {
               locationBias: {
@@ -465,7 +497,7 @@ export async function googlePlacePhoto(place: Place) {
   if (!place.googlePhoto) return null;
   if (!place.googlePhoto.name.startsWith(`places/${place.id.slice(7)}/photos/`))
     throw new HttpError(400, "La foto no corresponde al lugar.");
-  rateLimit("google:photos", 10, 60000);
+  rateLimit("google:photos", 60, 60000);
   const data = parseGoogleResponse(
     z.object({ photoUri: z.string().url() }),
     await googleRequest(

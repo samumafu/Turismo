@@ -2,7 +2,31 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
-import { LogIn, LogOut, Save, UserRound } from "lucide-react";
+import {
+  LogIn,
+  LogOut,
+  Save,
+  UserRound,
+  Eye,
+  EyeOff,
+  MailCheck,
+  LockKeyhole,
+  ArrowRight,
+  LoaderCircle,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from "@/components/ui/input-group";
 import {
   accountsConfigured,
   browserSupabase,
@@ -18,8 +42,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { journeySnapshotSchema, usePlanner } from "./provider";
-import { storedJourney } from "@/lib/journey-storage";
+import { usePlanner } from "./provider";
+import { storedJourney, readStoredJourney } from "@/lib/journey-storage";
 
 type FormMode = "login" | "register" | "confirm" | "forgot";
 const pendingJourneyKey = "turismo-narino:pending-registration";
@@ -32,7 +56,7 @@ export function Account() {
   const [mode, setMode] = useState<FormMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginFailures, setLoginFailures] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [syncEnabled, setSyncEnabled] = useState(false);
@@ -76,11 +100,11 @@ export function Account() {
       try {
         const raw = sessionStorage.getItem(pendingJourneyKey);
         if (!raw) return;
-        const parsed = journeySnapshotSchema.safeParse(JSON.parse(raw));
-        if (parsed.success) {
+        const parsed = readStoredJourney(JSON.parse(raw));
+        if (parsed) {
           pendingRestored.current = true;
           pendingRestored.current = await current.current.actions.loadJourney(
-            parsed.data,
+            parsed.snapshot,
           );
         }
         sessionStorage.removeItem(pendingJourneyKey);
@@ -210,26 +234,30 @@ export function Account() {
         );
         return;
       }
-      const parsed = journeySnapshotSchema.safeParse(data?.journey);
-      if (data && !parsed.success) {
+      const parsed = readStoredJourney(data?.journey);
+      if (data && !parsed) {
         setMessage(
-          "El viaje guardado no se pudo interpretar. El viaje actual sigue abierto.",
+          "No se pudo recuperar el recorrido guardado. Puedes guardar el actual desde tu cuenta.",
         );
         return;
       }
-      setSavedAvailable(parsed.success);
+      setSavedAvailable(!!parsed);
       const existing = current.current.state;
       const hasOpenJourney =
         pendingRestored.current ||
         !!existing.itinerary ||
         existing.results.length > 0;
       pendingRestored.current = false;
-      if (parsed.success && !hasOpenJourney) {
-        if (await current.current.actions.loadJourney(parsed.data)) {
+      if (parsed && !hasOpenJourney) {
+        if (await current.current.actions.loadJourney(parsed.snapshot)) {
           setSyncEnabled(true);
-          setMessage("Tu viaje guardado está listo.");
+          setMessage(
+            parsed.legacyVisits
+              ? "Recuperamos tus preferencias. Elige de nuevo las visitas del mapa anterior para continuar con Google Maps."
+              : "Tu viaje guardado está listo.",
+          );
         } else setMessage("No se pudo cargar el viaje guardado.");
-      } else if (parsed.success) {
+      } else if (parsed) {
         setMessage(
           "Tienes un viaje guardado. Puedes abrirlo o guardar el actual.",
         );
@@ -283,8 +311,8 @@ export function Account() {
       .select("journey")
       .eq("user_id", user.id)
       .maybeSingle();
-    const parsed = journeySnapshotSchema.safeParse(data?.journey);
-    if (error || !parsed.success || !(await actions.loadJourney(parsed.data)))
+    const parsed = readStoredJourney(data?.journey);
+    if (error || !parsed || !(await actions.loadJourney(parsed.snapshot)))
       setMessage("No se pudo abrir el viaje guardado.");
     else {
       setSyncEnabled(true);
@@ -313,12 +341,9 @@ export function Account() {
           password,
         });
         if (error) {
-          if (error.code === "invalid_credentials")
-            setLoginFailures((count) => count + 1);
           if (error.code === "email_not_confirmed") setMode("confirm");
           throw error;
         }
-        setLoginFailures(0);
         setPassword("");
         setOpen(false);
       } else if (mode === "register") {
@@ -346,7 +371,7 @@ export function Account() {
         setMessage(
           data.session
             ? "Tu cuenta está lista."
-            : "Abre el correo y pulsa «Confirmar mi correo». Volverás al planificador con tu cuenta confirmada.",
+            : "Te enviamos un correo de verificación. Abre Gmail o tu servicio de correo y sigue las instrucciones para activar tu cuenta.",
         );
         if (!data.session) setMode("confirm");
       } else if (mode === "confirm") {
@@ -408,78 +433,94 @@ export function Account() {
   }
 
   return (
-    <div className="account-area">
-      <Button
-        variant="outline"
-        disabled={authLoading}
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        aria-controls="account-panel"
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button
+            variant={user ? "secondary" : "default"}
+            disabled={authLoading}
+          />
+        }
       >
-        <UserRound data-icon="inline-start" aria-hidden="true" />{" "}
-        {authLoading
-          ? "Comprobando sesión…"
-          : user
-            ? "Mi cuenta"
-            : "Iniciar sesión"}
-      </Button>
-      {open ? (
-        <section
-          id="account-panel"
-          className="account-panel"
-          aria-label="Cuenta"
-        >
-          {user ? (
-            <>
-              <h2>Tu cuenta</h2>
-              <p className="account-email">{user.email}</p>
-              <div className="account-actions">
-                <Button
-                  disabled={busy || !hasJourney}
-                  onClick={() => {
-                    setSyncEnabled(true);
-                    void saveJourney(serialized, user.id);
-                  }}
-                >
-                  <Save data-icon="inline-start" /> Guardar viaje actual
-                </Button>
-                {savedAvailable ? (
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void loadSaved()}
-                  >
-                    Abrir viaje guardado
-                  </Button>
-                ) : null}
-                <Button
-                  variant="ghost"
-                  disabled={busy || state.busy}
-                  onClick={() => void signOut()}
-                >
-                  <LogOut data-icon="inline-start" /> Cerrar sesión
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2>
-                {mode === "register"
-                  ? "Crea tu cuenta"
-                  : mode === "confirm"
-                    ? "Verifica tu correo"
-                    : mode === "forgot"
-                      ? "Recupera tu acceso"
-                      : "Qué bueno verte de nuevo"}
-              </h2>
-              <p>
-                {mode === "confirm"
-                  ? "Pulsa el botón del correo para confirmar tu cuenta. Desde aquí puedes solicitar otro enlace."
+        {authLoading ? (
+          <LoaderCircle
+            data-icon="inline-start"
+            className="animate-spin"
+            aria-hidden="true"
+          />
+        ) : (
+          <UserRound data-icon="inline-start" aria-hidden="true" />
+        )}
+        {authLoading ? "Conectando…" : user ? "Mi cuenta" : "Iniciar sesión"}
+      </DialogTrigger>
+      <DialogContent className="account-dialog">
+        <DialogHeader>
+          <div className="account-symbol">
+            {user ? (
+              <UserRound aria-hidden="true" />
+            ) : mode === "confirm" ? (
+              <MailCheck aria-hidden="true" />
+            ) : (
+              <LockKeyhole aria-hidden="true" />
+            )}
+          </div>
+          <DialogTitle>
+            {user
+              ? "Tu espacio de viaje"
+              : mode === "register"
+                ? "Crea tu cuenta"
+                : mode === "confirm"
+                  ? "Revisa tu correo"
                   : mode === "forgot"
-                    ? "Te enviaremos un enlace para crear una contraseña nueva."
-                    : "Guarda tu viaje y retómalo cuando quieras."}
-              </p>
-              <form onSubmit={submit}>
+                    ? "Recupera tu acceso"
+                    : "Inicia sesión"}
+          </DialogTitle>
+          <DialogDescription>
+            {user
+              ? user.email
+              : mode === "confirm"
+                ? `Abre Gmail o tu servicio de correo y sigue las instrucciones de verificación${email ? " que enviamos a " + email : ""}. Revisa también la carpeta de spam.`
+                : mode === "forgot"
+                  ? "Te enviaremos un enlace para elegir una contraseña nueva."
+                  : "Guarda tus lugares y retoma tu recorrido cuando quieras."}
+          </DialogDescription>
+        </DialogHeader>
+        {user ? (
+          <div className="account-actions">
+            <Button
+              disabled={busy || !hasJourney}
+              onClick={async () => {
+                setBusy(true);
+                setSyncEnabled(true);
+                await saveJourney(serialized, user.id);
+                setBusy(false);
+              }}
+            >
+              <Save data-icon="inline-start" aria-hidden="true" />
+              Guardar recorrido actual
+            </Button>
+            {savedAvailable ? (
+              <Button
+                variant="outline"
+                disabled={busy || state.busy}
+                onClick={() => void loadSaved()}
+              >
+                Abrir recorrido guardado
+              </Button>
+            ) : null}
+            <Button
+              variant="ghost"
+              disabled={busy || state.busy}
+              onClick={() => void signOut()}
+            >
+              <LogOut data-icon="inline-start" aria-hidden="true" />
+              Cerrar sesión
+            </Button>
+          </div>
+        ) : (
+          <>
+            {mode !== "confirm" ? (
+              <form onSubmit={submit} className="account-form">
                 <FieldGroup>
                   <Field>
                     <FieldLabel htmlFor="account-email">
@@ -490,124 +531,156 @@ export function Account() {
                       name="email"
                       type="email"
                       autoComplete="email"
+                      inputMode="email"
+                      placeholder="tu@correo.com"
                       disabled={busy}
                       maxLength={254}
                       required
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(event) => setEmail(event.target.value)}
                     />
                   </Field>
-                  {mode !== "forgot" && mode !== "confirm" ? (
+                  {mode !== "forgot" ? (
                     <Field>
-                      <FieldLabel htmlFor="account-password">
-                        Contraseña
-                      </FieldLabel>
-                      <Input
-                        id="account-password"
-                        name="password"
-                        type="password"
-                        autoComplete={
-                          mode === "login" ? "current-password" : "new-password"
-                        }
-                        minLength={mode === "login" ? 1 : 8}
-                        disabled={busy}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
+                      <div className="password-label">
+                        <FieldLabel htmlFor="account-password">
+                          Contraseña
+                        </FieldLabel>
+                        {mode === "login" && passwordRecoveryEnabled ? (
+                          <button
+                            type="button"
+                            className="text-action"
+                            disabled={busy}
+                            onClick={() => {
+                              setMode("forgot");
+                              setPassword("");
+                              setMessage("");
+                            }}
+                          >
+                            ¿La olvidaste?
+                          </button>
+                        ) : null}
+                      </div>
+                      <InputGroup>
+                        <InputGroupInput
+                          id="account-password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete={
+                            mode === "login"
+                              ? "current-password"
+                              : "new-password"
+                          }
+                          minLength={mode === "login" ? 1 : 8}
+                          disabled={busy}
+                          required
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder={
+                            mode === "register"
+                              ? "Al menos 8 caracteres"
+                              : "Tu contraseña"
+                          }
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <Button
+                            type="button"
+                            size="icon-sm"
+                            variant="ghost"
+                            aria-label={
+                              showPassword
+                                ? "Ocultar contraseña"
+                                : "Mostrar contraseña"
+                            }
+                            onClick={() => setShowPassword((value) => !value)}
+                          >
+                            {showPassword ? (
+                              <EyeOff aria-hidden="true" />
+                            ) : (
+                              <Eye aria-hidden="true" />
+                            )}
+                          </Button>
+                        </InputGroupAddon>
+                      </InputGroup>
                     </Field>
                   ) : null}
                   <Button type="submit" disabled={busy}>
-                    <LogIn data-icon="inline-start" />
+                    {busy ? (
+                      <LoaderCircle
+                        data-icon="inline-start"
+                        className="animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <LogIn data-icon="inline-start" aria-hidden="true" />
+                    )}
                     {busy
                       ? "Un momento…"
                       : mode === "register"
                         ? "Crear cuenta"
-                        : mode === "confirm"
-                          ? "Reenviar enlace de confirmación"
-                          : mode === "forgot"
-                            ? "Enviar enlace de recuperación"
-                            : "Iniciar sesión"}
+                        : mode === "forgot"
+                          ? "Enviar enlace"
+                          : "Iniciar sesión"}
                   </Button>
                 </FieldGroup>
               </form>
-              <div className="account-links">
-                {mode === "login" ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => {
-                        setMode("confirm");
-                        setPassword("");
-                        setMessage("");
-                      }}
-                    >
-                      Confirmar mi correo
-                    </button>
-                    {loginFailures >= 3 ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!passwordRecoveryEnabled) {
-                            setMessage(
-                              "La recuperación de contraseña estará disponible próximamente.",
-                            );
-                            return;
-                          }
-                          setMode("forgot");
-                          setMessage("");
-                        }}
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode("register");
-                        setMessage("");
-                      }}
-                    >
-                      ¿Aún no tienes cuenta? Regístrate
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode("login");
-                        setMessage("");
-                      }}
-                    >
-                      Volver a iniciar sesión
-                    </button>
-                  </>
-                )}
-              </div>
-              <Button variant="outline" disabled className="account-google">
-                Continuar con Google · Próximamente
-              </Button>
-            </>
-          )}
-          {message ? (
-            <p className="account-message" role="status">
-              {message}
-            </p>
-          ) : null}
-          {!accountsConfigured ? (
-            <p className="account-message">
-              Las cuentas aún no están configuradas. Puedes seguir explorando
-              sin iniciar sesión.
-            </p>
-          ) : null}
-        </section>
-      ) : message && user ? (
-        <p className="account-status" role="status">
-          {message}
-        </p>
-      ) : null}
-    </div>
+            ) : email ? (
+              <form onSubmit={submit}>
+                <Button type="submit" variant="outline" disabled={busy}>
+                  {busy ? "Enviando…" : "Reenviar correo"}
+                </Button>
+              </form>
+            ) : null}
+            <div className="account-switch">
+              {mode === "login" ? (
+                <>
+                  <span>¿Es tu primera visita?</span>
+                  <button
+                    type="button"
+                    className="text-action"
+                    disabled={busy}
+                    onClick={() => {
+                      setMode("register");
+                      setMessage("");
+                    }}
+                  >
+                    Crear una cuenta <ArrowRight aria-hidden="true" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="text-action"
+                  disabled={busy}
+                  onClick={() => {
+                    setMode("login");
+                    setPassword("");
+                    setMessage("");
+                  }}
+                >
+                  Volver a iniciar sesión
+                </button>
+              )}
+            </div>
+          </>
+        )}
+        {message ? (
+          <p className="account-message" role="status">
+            {message}
+          </p>
+        ) : null}
+        {!accountsConfigured ? (
+          <p className="account-message">
+            Las cuentas aún no están configuradas. Puedes explorar sin iniciar
+            sesión.
+          </p>
+        ) : null}
+        {!user ? (
+          <p className="account-footnote">
+            Puedes seguir explorando sin cuenta.
+          </p>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }

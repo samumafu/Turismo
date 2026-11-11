@@ -21,22 +21,22 @@ export default function Sources() {
             <p>
               Las búsquedas se realizan en Google Maps por nombre, categoría o
               zona. Verificamos que los resultados correspondan a Nariño,
-              Colombia, y al radio elegido. Cada página contiene hasta 20
-              resultados; «Ver más lugares» consulta la siguiente página cuando
-              está disponible, hasta 60 por búsqueda. Puedes cambiar los filtros
-              o la zona para seguir explorando.
+              Colombia, y a la distancia por calles elegida. Cada página de una
+              categoría contiene hasta 20 resultados; «Ver más lugares» consulta
+              la siguiente página cuando está disponible, hasta 60 por búsqueda.
+              Puedes cambiar los filtros o la zona para seguir explorando.
             </p>
             <p>
-              Las fotos se solicitan al pulsar «Ver foto del lugar» y muestran
-              el crédito de sus autores. Algunos lugares no tienen fotos
-              disponibles. Los horarios, precios y disponibilidad se consultan
-              en la ficha del lugar y deben confirmarse antes de viajar.
+              Las fotos se cargan cuando la tarjeta entra en pantalla y muestran
+              el crédito de sus autores. Puedes ampliarlas dentro de la app.
+              Algunos lugares no tienen fotos disponibles. Los horarios, precios
+              y disponibilidad se consultan en la ficha del lugar y deben
+              confirmarse antes de viajar.
             </p>
             <p>
               El contenido de los lugares permanece en la sesión activa. Los
-              viajes guardados y las descargas conservan identificadores,
-              elecciones y agenda; los datos de los lugares se consultan de
-              nuevo al abrirlos.
+              viajes guardados conservan identificadores, elecciones y agenda;
+              los datos de los lugares se consultan de nuevo al abrirlos.
             </p>
           </section>
           <section>

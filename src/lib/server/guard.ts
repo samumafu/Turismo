@@ -50,7 +50,11 @@ export function guardRequest(request: Request, namespace: string) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local";
   const key = createHash("sha256").update(ip).digest("hex").slice(0, 24);
-  rateLimit(`${namespace}:${key}`, namespace === "chat" ? 10 : 12, 60_000);
+  rateLimit(
+    `${namespace}:${key}`,
+    namespace === "chat" ? 10 : namespace === "photo" ? 60 : 12,
+    60_000,
+  );
 }
 
 export async function readJson(request: Request, maxBytes = 24000) {

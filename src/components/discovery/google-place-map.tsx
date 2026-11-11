@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { haversine, mapsLink } from "@/lib/places";
+import { haversine } from "@/lib/places";
+import { PlacePreview } from "./place-preview";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { PlaceMapProps } from "./place-map";
 
@@ -43,6 +46,9 @@ export default function GooglePlaceMap({
   const element = useRef<HTMLDivElement>(null);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [popup, setPopup] = useState<string | null>(null);
+  const closeDetail = useRef<HTMLButtonElement>(null);
+  const markerNodes = useRef(new Map<string, HTMLSpanElement>());
   const [latitude, longitude] = center;
   const initial = useRef({ latitude, longitude, radius });
   useEffect(() => {
@@ -92,7 +98,7 @@ export default function GooglePlaceMap({
         onMove({
           center: [c.lat(), c.lng()],
           radius: Math.max(
-            500,
+            100,
             Math.min(
               25000,
               Math.round(
@@ -111,13 +117,11 @@ export default function GooglePlaceMap({
   }, [runtime, latitude, longitude, radius]);
   useEffect(() => {
     if (!runtime) return;
-    const info = new runtime.maps.InfoWindow();
+    const nodes = markerNodes.current;
     const markers = places.map((place, index) => {
-      const content = document.createElement("button");
-      content.type = "button";
-      content.className =
-        "google-place-marker" +
-        (selectedIds.includes(place.id) ? " google-place-marker-selected" : "");
+      const content = document.createElement("span");
+      content.className = "google-place-marker";
+      nodes.set(place.id, content);
       content.textContent = String(index + 1);
       content.setAttribute("aria-label", place.name);
       const marker = new runtime.markers.AdvancedMarkerElement({
@@ -125,45 +129,28 @@ export default function GooglePlaceMap({
         position: { lat: place.coordinates[0], lng: place.coordinates[1] },
         title: place.name,
         content,
+        gmpClickable: true,
       });
-      marker.addListener("click", () => {
-        const popup = document.createElement("div");
-        popup.className = "google-place-popup";
-        const heading = document.createElement("strong");
-        heading.textContent = place.name;
-        popup.append(heading);
-        const category = document.createElement("p");
-        category.textContent = place.category;
-        popup.append(category);
-        const link = document.createElement("a");
-        link.href = mapsLink(place);
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = "Ver en Google Maps";
-        popup.append(link);
-        if (onSelect && place.availability !== "restringido") {
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "map-pick-button";
-          button.textContent = selectedIds.includes(place.id)
-            ? "Quitar de mi itinerario"
-            : selectionLabel;
-          button.addEventListener("click", () => onSelect(place.id));
-          popup.append(button);
-        }
-        info.setContent(popup);
-        info.open({ map: runtime.map, anchor: marker });
-      });
+      marker.addEventListener("gmp-click", () =>
+        setPopup((current) => (current === place.id ? null : place.id)),
+      );
       return marker;
     });
     return () => {
-      info.close();
+      nodes.clear();
       for (const marker of markers) {
         google.maps.event.clearInstanceListeners(marker);
         marker.map = null;
       }
     };
-  }, [runtime, places, selectedIds, onSelect, selectionLabel]);
+  }, [runtime, places]);
+  useEffect(() => {
+    for (const [id, content] of markerNodes.current)
+      content.classList.toggle(
+        "google-place-marker-selected",
+        selectedIds.includes(id),
+      );
+  }, [runtime, places, selectedIds]);
   useEffect(() => {
     if (!runtime) return;
     const overlays: { setMap: (map: google.maps.Map | null) => void }[] = [];
@@ -219,7 +206,9 @@ export default function GooglePlaceMap({
         runtime.map,
         "idle",
         () => {
-          if ((runtime.map.getZoom() ?? 0) > 16) runtime.map.setZoom(16);
+          const maxZoom = routeCoordinates ? 18 : 17;
+          if ((runtime.map.getZoom() ?? 0) > maxZoom)
+            runtime.map.setZoom(maxZoom);
         },
       );
       return () => {
@@ -231,8 +220,16 @@ export default function GooglePlaceMap({
       for (const overlay of overlays) overlay.setMap(null);
     };
   }, [runtime, places, position, originLabel, routeCoordinates]);
+  const activePlace = places.find((place) => place.id === popup);
+  useEffect(() => {
+    if (popup)
+      queueMicrotask(() => closeDetail.current?.focus({ preventScroll: true }));
+  }, [popup]);
   return (
     <div
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setPopup(null);
+      }}
       className="discovery-map"
       role="region"
       aria-label="Mapa de lugares en Google Maps"
@@ -243,6 +240,31 @@ export default function GooglePlaceMap({
         </Alert>
       ) : null}
       <div ref={element} className="google-map" />
+      {activePlace ? (
+        <aside
+          className="map-place-detail"
+          aria-label={"Ficha de " + activePlace.name}
+        >
+          <Button
+            ref={closeDetail}
+            className="map-detail-close"
+            size="icon-sm"
+            variant="secondary"
+            aria-label="Cerrar ficha del lugar"
+            onClick={() => setPopup(null)}
+          >
+            <X aria-hidden="true" />
+          </Button>
+          <div className="map-detail-scroll">
+            <PlacePreview
+              place={activePlace}
+              selected={selectedIds.includes(activePlace.id)}
+              onSelect={onSelect}
+              selectionLabel={selectionLabel}
+            />
+          </div>
+        </aside>
+      ) : null}
       {!runtime && !error ? (
         <p role="status" className="map-note">
           Cargando Google Maps…

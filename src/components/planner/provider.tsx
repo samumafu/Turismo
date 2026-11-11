@@ -12,8 +12,6 @@ import { z } from "zod";
 import {
   chatResponseSchema,
   emptyProfile,
-  itinerarySchema,
-  profileSchema,
   type ChatMessage,
   type ChatResponse,
   type Itinerary,
@@ -22,8 +20,6 @@ import {
 import { acceptedJourney } from "@/lib/accepted-journey";
 import { useUserLocation } from "./use-user-location";
 import {
-  placeIdSchema,
-  googleIdSchema,
   placeSchema,
   searchSpecSchema,
   searchResponseSchema,
@@ -31,24 +27,13 @@ import {
   type SearchResponse,
   type SearchSpec,
 } from "@/lib/places";
+import { type JourneySnapshot } from "@/lib/journey-storage";
 
 const greeting: ChatMessage = {
   role: "assistant",
   content:
     "Hola. Cuéntame qué quieres hacer en Nariño. Puedo buscar lugares, organizar tu itinerario y ajustarlo contigo.",
 };
-export const journeySnapshotSchema = z.object({
-  action: z.enum(["explore", "plan", "clarify"]).optional(),
-  results: z.array(placeSchema).max(60),
-  places: z.array(placeSchema).max(100),
-  search: searchSpecSchema,
-  profile: profileSchema,
-  itinerary: itinerarySchema.nullable(),
-  mode: z.enum(["gemini", "demo"]).nullable(),
-  acceptedIds: z.array(placeIdSchema).max(25).default([]),
-  googlePlaceIds: z.array(googleIdSchema).max(25).default([]),
-});
-export type JourneySnapshot = z.infer<typeof journeySnapshotSchema>;
 type State = {
   action: ChatResponse["action"];
   results: Place[];
@@ -64,12 +49,16 @@ type State = {
   notice: string | null;
   busy: boolean;
   error: string | null;
+  routeDay: number;
+  routeRequest: number;
 };
 type PlannerContextValue = {
   location: ReturnType<typeof useUserLocation>;
   state: State;
   actions: {
     send: (text: string, demo?: boolean) => Promise<boolean>;
+    searchPlaces: (spec: SearchSpec, text?: string) => Promise<boolean>;
+    showRoute: (day: number) => void;
     togglePlace: (id: string) => void;
     movePlace: (id: string, direction: number) => void;
     confirmOrigin: () => void;
@@ -99,6 +88,8 @@ const initial: State = {
   notice: null,
   busy: false,
   error: null,
+  routeDay: 0,
+  routeRequest: 0,
 };
 
 export function PlannerProvider({ children }: { children: ReactNode }) {
@@ -157,6 +148,16 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           search: state.search,
           selectedIds: state.selectedIds,
           knownPlaces: state.places,
+          origin: state.origin?.confirmed
+            ? state.origin
+            : location.position
+              ? {
+                  query: "Tu ubicación",
+                  name: "Tu ubicación",
+                  coordinates: location.position.coordinates,
+                  confirmed: true,
+                }
+              : undefined,
         }),
         signal: AbortSignal.timeout(80000),
       });
@@ -184,6 +185,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           ...s,
           action: result.action,
           results: result.discovery ? result.places : s.results,
+          routeRequest: result.discovery ? 0 : s.routeRequest,
           discovery: result.discovery ?? s.discovery,
           places,
           selectedIds,
@@ -215,6 +217,49 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     } finally {
       lock.current = false;
     }
+  }
+  async function searchPlaces(spec: SearchSpec, text = "") {
+    if (lock.current) return false;
+    lock.current = true;
+    setState((s) => ({ ...s, busy: true, error: null }));
+    try {
+      const response = await fetch("/api/places/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, spec }),
+        signal: AbortSignal.timeout(70000),
+      });
+      const body = await response.json();
+      if (!response.ok)
+        throw new Error(body.error ?? "No se pudo completar la búsqueda.");
+      const result = searchResponseSchema.parse(body);
+      lock.current = false;
+      discover(result);
+      const url = new URL(window.location.href);
+      url.searchParams.set("zona", result.spec.zone);
+      url.searchParams.set("categoria", result.spec.categories[0]);
+      window.history.replaceState(window.history.state, "", url);
+      return true;
+    } catch (error) {
+      setState((s) => ({
+        ...s,
+        error:
+          error instanceof Error
+            ? error.message
+            : "No se pudo completar la búsqueda.",
+      }));
+      return false;
+    } finally {
+      lock.current = false;
+      setState((s) => ({ ...s, busy: false }));
+    }
+  }
+  function showRoute(day: number) {
+    setState((s) => ({
+      ...s,
+      routeDay: day,
+      routeRequest: s.routeRequest + 1,
+    }));
   }
   function reset() {
     if (!lock.current) {
@@ -297,6 +342,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       ...s,
       action: "explore",
       results: result.places,
+      routeRequest: 0,
       places: [
         ...new Map(
           [...s.places, ...result.places].map((p) => [p.id, p]),
@@ -426,6 +472,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         state,
         actions: {
           send,
+          searchPlaces,
+          showRoute,
           reset,
           restore,
           loadJourney,
@@ -448,4 +496,7 @@ export function usePlanner() {
   const value = use(PlannerContext);
   if (!value) throw new Error("PlannerProvider is required");
   return value;
+}
+export function useOptionalPlanner() {
+  return use(PlannerContext);
 }

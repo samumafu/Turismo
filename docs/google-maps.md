@@ -32,7 +32,11 @@ Se muestran todas las opciones recibidas, sin el antiguo recorte visual de tres 
 
 El itinerario contiene únicamente visitas aceptadas, con hasta cinco paradas por jornada. Google calcula rutas reales en carro o a pie desde el GPS o un origen confirmado. El transporte público conserva el enlace externo. Las horas de la agenda son orientativas; la duración y distancia de la ruta provienen de Google.
 
-Los lugares no se guardan como catálogo. Los viajes guardados y sus descargas conservan identificadores, elecciones y agenda. Al abrirlos, se vuelven a consultar las fichas. Las fotografías y las rutas no se almacenan en caché del servidor. Los registros firmados tienen una vigencia de 30 minutos para evitar consultas repetidas durante la sesión.
+Los lugares no se guardan como catálogo. Los viajes guardados conservan identificadores, elecciones y agenda. Al abrirlos, se vuelven a consultar las fichas. Las fotografías y las rutas no se almacenan en caché del servidor. Los registros firmados tienen una vigencia de 30 minutos para evitar consultas repetidas durante la sesión.
+
+La distancia de búsqueda es personalizable entre 100 y 25 000 metros. Routes API Compute Route Matrix mide los trayectos por calles y filtra los resultados según esa distancia. Las búsquedas combinadas consultan cada categoría por separado y verifican conexiones cortas entre ellas; no se inventan distancias si Google no encuentra una ruta. Los puntos sin una referencia concreta usan el centro de la zona, claramente indicado en la interfaz.
+
+Las fotos se solicitan solo cuando entran en pantalla, con dos descargas simultáneas como máximo. Durante esa visita a la página se deduplican las solicitudes de una misma imagen durante cinco minutos. No hay catálogo ni caché persistente de fotografías. En la ficha del marcador y en las tarjetas se conservan las atribuciones.
 
 ## Verificación
 

@@ -2,7 +2,7 @@ import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { POST } from "../src/app/api/chat/route";
 import { chatResponseSchema, emptyProfile } from "../src/lib/schemas";
-import { rawFixture } from "./fixtures";
+import { rawFixture, routeMatrixFixture } from "./fixtures";
 import { geminiFailureNotice } from "../src/lib/server/gemini";
 import { isVerifiedPlace } from "../src/lib/server/place-verification";
 import { itineraryIds } from "../src/lib/accepted-journey";
@@ -33,6 +33,8 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     globalThis,
     "fetch",
     async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).includes("computeRouteMatrix"))
+        return Response.json(routeMatrixFixture(init));
       if (String(url).includes("places.googleapis.com")) {
         mapsCalls++;
         return Response.json({
@@ -64,7 +66,10 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
             : /Organiza|Elijo/.test(last)
               ? "plan"
               : "explore",
-        message: "Elige los lugares que quieras visitar.",
+        message:
+          last === "Hola"
+            ? "El trayecto es de 500 metros en línea recta."
+            : "Elige los lugares que quieras visitar.",
         profile: data.previousProfile,
         zone: "pasto",
         radius: 8000,
@@ -93,6 +98,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
   try {
     const hello = await call({ messages: [{ role: "user", content: "Hola" }] });
     assert.equal(hello.action, "clarify");
+    assert.ok(!/500|recta/.test(hello.message));
     assert.equal(mapsCalls, 0);
     const options = await call({
       messages: [
@@ -104,7 +110,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     });
     assert.equal(options.itinerary, null);
     assert.equal(options.action, "explore");
-    assert.equal(options.places.length, 3);
+    assert.equal(options.places.length, 2);
     assert.ok(options.places.every(isVerifiedPlace));
     const chosen = options.places.slice(0, 2).map((p) => p.id);
     const before = modelCalls;
@@ -115,7 +121,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     });
     assert.deepEqual(itineraryIds(plan.itinerary), chosen);
     assert.equal(modelCalls - before, 1);
-    assert.equal(mapsCalls, 1);
+    assert.equal(mapsCalls, 2);
     assert.equal(plan.profile.budgetCOP, null); // Budget is not required to accept two visits.
     const suggestions = await call({
       messages: [{ role: "user", content: "Busca más cafeterías" }],

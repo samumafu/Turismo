@@ -19,7 +19,7 @@ import {
 import { chatResponseSchema, emptyProfile } from "../src/lib/schemas";
 import { storedJourney } from "../src/lib/journey-storage";
 import { acceptedJourney } from "../src/lib/accepted-journey";
-import { fixturePlaces } from "./fixtures";
+import { fixturePlaces, routeMatrixFixture } from "./fixtures";
 import { POST as photo } from "../src/app/api/places/photo/route";
 import { POST as route } from "../src/app/api/route/route";
 import { POST as chat } from "../src/app/api/chat/route";
@@ -112,6 +112,8 @@ test("Google Maps integrates search, accepted itineraries, photos, routes and ID
       }
       if (mode === "denied") return Response.json({}, { status: 403 });
       if (mode === "quota") return Response.json({}, { status: 429 });
+      if (url.includes("computeRouteMatrix"))
+        return Response.json(routeMatrixFixture(init));
       if (url.includes("/media?"))
         return Response.json({
           photoUri: "https://lh3.googleusercontent.com/synthetic-photo",

@@ -60,6 +60,12 @@ export const googleAuthorSchema = z.object({
     .max(1000)
     .optional(),
 });
+export const travelSchema = z.object({
+  distanceMeters: z.number().nonnegative(),
+  durationSeconds: z.number().nonnegative(),
+  mode: z.enum(["walking", "driving"]),
+  originName: z.string().max(180),
+});
 export const placeSchema = z.object({
   id: placeIdSchema,
   name: z.string().min(1).max(180),
@@ -84,6 +90,7 @@ export const placeSchema = z.object({
   observedAt: z.string().datetime(),
   cuisine: z.string().max(140).nullable(),
   verification: z.string().max(100).optional(),
+  travel: travelSchema.optional(),
   googlePhoto: z
     .object({
       name: z
@@ -112,7 +119,8 @@ export type Place = z.infer<typeof placeSchema>;
 export const searchSpecSchema = z.object({
   zone: z.enum(zoneKeys).default("pasto"),
   center: coordinateSchema.optional(),
-  radius: z.number().int().min(500).max(25000).default(8000),
+  radius: z.number().int().min(100).max(25000).default(8000),
+  travelMode: z.enum(["walking", "driving"]).default("walking"),
   categories: z.array(z.enum(categoryKeys)).min(1).max(3).default(["turismo"]),
   name: z.string().trim().max(80).default(""),
   near: z.string().trim().max(160).optional(),
@@ -224,12 +232,18 @@ export function interpretSearch(
       spec.categories.includes("restaurantes");
   }
   const radius = t.match(
-    /(?:radio(?: de)?|a menos de|hasta)\s*(\d+)\s*(km|metros|m)\b/,
+    /(?:(?:radio(?: de)?|a menos de|hasta|a no mas de|a|dentro de)\s*)?(\d+(?:[.,]\d+)?)\s*(kilometros?|km|metros?|m)\b/,
   );
   if (radius)
     spec.radius = Math.max(
-      500,
-      Math.min(25000, Number(radius[1]) * (radius[2] === "km" ? 1000 : 1)),
+      100,
+      Math.min(
+        25000,
+        Math.round(
+          Number(radius[1].replace(",", ".")) *
+            (/^k/.test(radius[2]) ? 1000 : 1),
+        ),
+      ),
     );
   const named = text.match(/[“"]([^”"]{2,80})[”"]/);
   const targetText =
@@ -281,5 +295,24 @@ export function interpretSearch(
     if (spec.name && normalize(spec.name).includes(normalize(near)))
       spec.name = "";
   }
+  if (
+    !radius &&
+    detected.length > 1 &&
+    /cerca|cercanos|juntos/.test(t) &&
+    !nearby
+  )
+    spec.radius = 1500;
+  if (/a pie|caminando/.test(t)) spec.travelMode = "walking";
+  else if (/en carro|en coche|conduciendo/.test(t)) spec.travelMode = "driving";
   return searchSpecSchema.parse(spec);
+}
+
+export function formatDistance(meters: number) {
+  return meters < 1000
+    ? `${Math.round(meters)} m`
+    : `${(meters / 1000).toLocaleString("es-CO", { maximumFractionDigits: 1 })} km`;
+}
+
+export function formatTravel(travel: z.infer<typeof travelSchema>) {
+  return `${formatDistance(travel.distanceMeters)} · ${Math.max(1, Math.round(travel.durationSeconds / 60))} min ${travel.mode === "walking" ? "a pie" : "en carro"}`;
 }

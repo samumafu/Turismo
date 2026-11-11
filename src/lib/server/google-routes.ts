@@ -45,6 +45,24 @@ const schema = z.object({
         distanceMeters: z.number().nonnegative(),
         duration: z.string().regex(/^\d+(?:\.\d+)?s$/),
         polyline: z.object({ encodedPolyline: z.string().max(200000) }),
+        legs: z
+          .array(
+            z.object({
+              steps: z
+                .array(
+                  z.object({
+                    navigationInstruction: z
+                      .object({ instructions: z.string().max(600) })
+                      .optional(),
+                    distanceMeters: z.number().nonnegative().default(0),
+                  }),
+                )
+                .max(500)
+                .default([]),
+            }),
+          )
+          .max(6)
+          .default([]),
       }),
     )
     .min(1)
@@ -74,7 +92,7 @@ export async function googleRoute(
   const result = schema.safeParse(
     await googleRequest(
       "routes/computeRoutes",
-      "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+      "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction.instructions,routes.legs.steps.distanceMeters",
       {
         origin: points[0],
         destination: points.at(-1),
@@ -82,6 +100,7 @@ export async function googleRoute(
         travelMode: mode === "walking" ? "WALK" : "DRIVE",
         ...(mode === "driving" ? { routingPreference: "TRAFFIC_UNAWARE" } : {}),
         computeAlternativeRoutes: false,
+        optimizeWaypointOrder: false,
         polylineQuality: "OVERVIEW",
         languageCode: "es",
         units: "METRIC",
@@ -105,6 +124,20 @@ export async function googleRoute(
     geometry: { type: "LineString" as const, coordinates },
     distanceMeters: route.distanceMeters,
     durationSeconds: Number(route.duration.slice(0, -1)),
+    steps: route.legs
+      .flatMap((leg) =>
+        leg.steps.flatMap((step) =>
+          step.navigationInstruction?.instructions
+            ? [
+                {
+                  instruction: step.navigationInstruction.instructions,
+                  distanceMeters: step.distanceMeters,
+                },
+              ]
+            : [],
+        ),
+      )
+      .slice(0, 200),
     provider: "Google Maps",
     profile: mode,
   };

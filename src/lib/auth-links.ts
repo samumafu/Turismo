@@ -24,7 +24,7 @@ export function readEmailReturn(href: string): EmailReturn {
       kind: "error",
       message:
         code === "otp_expired"
-          ? "Ese enlace ya fue utilizado o venció. Si tu correo ya está confirmado, inicia sesión con tu contraseña. Si no, pulsa «Confirmar mi correo» para pedir otro enlace."
+          ? "Ese enlace ya fue utilizado o venció. Si ya verificaste tu correo, inicia sesión con tu contraseña. Si la cuenta sigue pendiente, al iniciar sesión podrás solicitar un correo nuevo."
           : "No pudimos completar el acceso desde el correo. Inicia sesión o solicita otro enlace de confirmación.",
     };
   }

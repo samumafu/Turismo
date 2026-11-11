@@ -1,5 +1,5 @@
 "use client";
-import { ArrowDown, ArrowUp, Clock3, Download, MapPin, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Clock3, Route, MapPin, X } from "lucide-react";
 import { usePlanner } from "./provider";
 import { mapsLink } from "@/lib/places";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/empty";
 import { PlacePhoto } from "@/components/discovery/place-photo";
 import { GoogleAttribution } from "@/components/discovery/google-attribution";
-import { storedJourney } from "@/lib/journey-storage";
 export function ItineraryPanel() {
   const { state, actions } = usePlanner();
   const { itinerary } = state;
@@ -29,34 +28,6 @@ export function ItineraryPanel() {
       </Empty>
     );
   const byId = new Map(state.places.map((p) => [p.id, p]));
-  function download() {
-    const url = URL.createObjectURL(
-      new Blob(
-        [
-          JSON.stringify(
-            storedJourney({
-              itinerary,
-              results: [],
-              search: state.search,
-              acceptedIds: state.selectedIds,
-              places: state.places.filter((p) =>
-                state.selectedIds.includes(p.id),
-              ),
-              notice: "Horas orientativas. Confirma acceso y horarios.",
-            }),
-            null,
-            2,
-          ),
-        ],
-        { type: "application/json" },
-      ),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "mi-viaje-narino.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
   return (
     <div className="itinerary-panel">
       <GoogleAttribution
@@ -72,16 +43,8 @@ export function ItineraryPanel() {
             orden que elegiste
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Descargar itinerario"
-          onClick={download}
-        >
-          <Download aria-hidden="true" />
-        </Button>
       </div>
-      {itinerary.days.map((day) => (
+      {itinerary.days.map((day, dayIndex) => (
         <section className="day-section" key={day.day}>
           <div className="day-heading">
             <span className="day-number">
@@ -92,6 +55,14 @@ export function ItineraryPanel() {
               <p>Horarios orientativos, sujetos a apertura y traslados.</p>
             </div>
           </div>
+          <Button
+            className="day-route-button"
+            variant="secondary"
+            onClick={() => actions.showRoute(dayIndex)}
+          >
+            <Route data-icon="inline-start" aria-hidden="true" /> Ver recorrido
+            del día en el mapa
+          </Button>
           <ol className="stop-list">
             {day.stops.map((stop) => {
               const place = byId.get(stop.placeId);
@@ -149,8 +120,8 @@ export function ItineraryPanel() {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <MapPin size={14} aria-hidden="true" /> Google Maps y
-                        fotos
+                        <MapPin size={14} aria-hidden="true" /> Ver en Google
+                        Maps
                       </a>
                     </div>
                     <details>

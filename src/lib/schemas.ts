@@ -68,6 +68,7 @@ export const chatRequestSchema = z
     search: searchSpecSchema.optional(),
     selectedIds: z.array(placeIdSchema).max(25).default([]),
     knownPlaces: z.array(placeSchema).max(100).optional(),
+    origin: agreedOriginSchema.optional(),
   })
   .refine(
     (v) => v.messages.at(-1)?.role === "user",

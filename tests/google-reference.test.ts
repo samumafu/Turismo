@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { POST as chat } from "../src/app/api/chat/route";
 import { normalizeGooglePlace } from "../src/lib/server/google-maps";
 import { chatResponseSchema } from "../src/lib/schemas";
+import { routeMatrixFixture } from "./fixtures";
 
 const addressComponents = [
   { longText: "Campus sin etiqueta de tipo" },
@@ -41,6 +42,8 @@ test("chat searches near a reference and resolves an origin without failing on s
     globalThis,
     "fetch",
     async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(_input).includes("computeRouteMatrix"))
+        return Response.json(routeMatrixFixture(init));
       const body = JSON.parse(String(init?.body));
       if (mode === "malformed") return Response.json({ places: "invalid" });
       return Response.json({

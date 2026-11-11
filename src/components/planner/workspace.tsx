@@ -3,11 +3,10 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { Map, List, MessageCircle, SlidersHorizontal } from "lucide-react";
-import { PlannerProvider, usePlanner } from "./provider";
+import { usePlanner } from "./provider";
 import { ChatPanel } from "./chat";
 import { ItineraryPanel } from "./itinerary";
 import { PlaceOptions } from "./place-options";
-import { Account } from "./account";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -22,30 +21,27 @@ const JourneyMap = dynamic(() => import("./journey-map"), {
   loading: () => <Skeleton className="h-[500px] w-full" />,
 });
 function Workspace() {
-  const { state, actions } = usePlanner();
+  const { state } = usePlanner();
   const [view, setView] = useState("map");
   const [advanced, setAdvanced] = useState(false);
   useEffect(() => {
-    if (state.origin) {
-      if (!state.origin.confirmed) queueMicrotask(() => setView("map"));
-      return;
-    }
-    if (state.action !== "clarify")
-      queueMicrotask(() =>
-        setView(
-          state.action === "plan" && state.itinerary ? "itinerary" : "map",
-        ),
-      );
-  }, [state.action, state.itinerary, state.origin]);
+    queueMicrotask(() => setView("map"));
+  }, [state.results]);
+  useEffect(() => {
+    if (state.origin && !state.origin.confirmed)
+      queueMicrotask(() => setView("map"));
+  }, [state.origin]);
+  useEffect(() => {
+    if (!state.routeRequest) return;
+    queueMicrotask(() => {
+      setView("map");
+      document
+        .getElementById("mi-itinerario")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [state.routeRequest]);
   return (
     <div className="workspace">
-      <div className="workspace-top">
-        <div>
-          <h1>Planifica tu viaje por Nariño</h1>
-          <p>Conversa, descubre lugares y organiza tu recorrido.</p>
-        </div>
-        <Account />
-      </div>
       <nav
         className="workspace-navigation"
         aria-label="Ir a una sección del planificador"
@@ -72,53 +68,55 @@ function Workspace() {
                   Itinerario
                 </TabsTrigger>
               </TabsList>
+              <Button
+                variant="ghost"
+                aria-expanded={advanced}
+                aria-controls="advanced-search-panel"
+                onClick={() => setAdvanced((value) => !value)}
+              >
+                <SlidersHorizontal
+                  data-icon="inline-start"
+                  aria-hidden="true"
+                />
+                {advanced ? "Cerrar filtros" : "Filtros de búsqueda"}
+              </Button>
               <a className="mobile-chat-link" href="#chat-viaje">
                 Volver al chat
               </a>
             </div>
+            {advanced ? (
+              <div className="advanced-search" id="advanced-search-panel">
+                <AdvancedExplorer
+                  onComplete={() => {
+                    setView("map");
+                    setAdvanced(false);
+                    document
+                      .getElementById("mi-itinerario")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                />
+              </div>
+            ) : null}
             <TabsContent value="itinerary">
               <ItineraryPanel />
             </TabsContent>
-            <TabsContent value="map">
-              {view === "map" ? <JourneyMap /> : null}
-              <PlaceOptions />
+            <TabsContent value="map" keepMounted>
+              <JourneyMap />
+              <PlaceOptions
+                onViewItinerary={() => {
+                  setView("itinerary");
+                  document
+                    .getElementById("mi-itinerario")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
             </TabsContent>
           </Tabs>
         </div>
-      </div>
-      <div className="advanced-search">
-        <Button
-          variant="outline"
-          aria-expanded={advanced}
-          aria-controls="advanced-search-panel"
-          onClick={() => setAdvanced((v) => !v)}
-        >
-          <SlidersHorizontal data-icon="inline-start" aria-hidden="true" />
-          {advanced ? "Cerrar búsqueda avanzada" : "Búsqueda avanzada"}
-        </Button>
-        {advanced ? (
-          <div id="advanced-search-panel">
-            <AdvancedExplorer
-              onResults={actions.discover}
-              onUseSelection={(ids, search) => {
-                actions.selectPlaces(ids, search);
-                setAdvanced(false);
-                queueMicrotask(() => setView("itinerary"));
-                document
-                  .getElementById("mi-itinerario")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            />
-          </div>
-        ) : null}
       </div>
     </div>
   );
 }
 export function PlannerWorkspace() {
-  return (
-    <PlannerProvider>
-      <Workspace />
-    </PlannerProvider>
-  );
+  return <Workspace />;
 }
