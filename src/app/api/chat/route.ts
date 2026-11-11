@@ -8,6 +8,7 @@ import {
   formatTravel,
   searchZones,
   categoryLabels,
+  locationReference,
 } from "@/lib/places";
 import { resolvePlaces } from "@/lib/server/discovery";
 import { discoverReachablePlaces } from "@/lib/server/route-discovery";
@@ -60,12 +61,15 @@ export async function POST(request: Request) {
     input.knownPlaces = known;
     let add: string[] = [];
     let remove: string[] = [];
-    let originQuery: string | undefined;
+    const namedReference = locationReference(last);
+    let originQuery: string | undefined = namedReference;
     let proposedItinerary = input.itinerary;
     const originIntent =
-      /salgo|salimos|saldre|parto|partimos|punto de partida|comenzamos desde|inicio desde|mi direccion|salida es|saldremos|como salida/.test(
+      /salgo|salimos|saldre|parto|partimos|punto de partida|comenzamos desde|inicio desde|mi direccion|salida es|saldremos|como salida|(?:estoy|estamos|me encuentro|nos encontramos) (?:en|cerca|junto)/.test(
         text,
-      );
+      ) ||
+      (!!namedReference &&
+        (input.selectedIds.length > 0 || action === "clarify"));
     const selectionIntent =
       /elijo|elige|acepto|escojo|me quedo|prefiero|quiero visitar|agrega|anade|incluye|quita|retira|elimina/.test(
         text,
@@ -82,7 +86,7 @@ export async function POST(request: Request) {
           add = intent.selection?.add ?? [];
           remove = intent.selection?.remove ?? [];
         }
-        if (originIntent) originQuery = intent.originQuery || undefined;
+        if (originIntent) originQuery ||= intent.originQuery || undefined;
       } catch (error) {
         mode = "demo";
         notice = geminiFailureNotice(error);
@@ -95,6 +99,14 @@ export async function POST(request: Request) {
       radius: explicit.radius,
       travelMode: explicit.travelMode,
       categories: explicit.categories,
+      ...(namedReference
+        ? {
+            near: namedReference,
+            center: undefined,
+            reference: undefined,
+            name: "",
+          }
+        : {}),
       ...(explicit.categories.length > 1
         ? { categories: explicit.categories, name: "" }
         : {}),
@@ -163,7 +175,7 @@ export async function POST(request: Request) {
           query: originQuery,
           name: resolved.reference!.name,
           coordinates: resolved.center!,
-          confirmed: false,
+          confirmed: true,
         };
         search = {
           ...search,
@@ -177,7 +189,7 @@ export async function POST(request: Request) {
     if (add.length || remove.length || (action === "plan" && selected.length)) {
       return json({
         message: origin
-          ? "Encontré tu punto de partida. Confírmalo en el mapa para usarlo en la ruta."
+          ? `La ruta saldrá desde ${origin.name} hacia las visitas que elijas. Puedes cambiar la salida con un pin en el mapa.`
           : itinerary
             ? "Tu itinerario contiene únicamente las visitas que aceptaste. Puedes quitar o reordenar sus paradas."
             : "Tu itinerario está vacío. Elige los lugares que quieras visitar entre las opciones del mapa.",
@@ -208,7 +220,7 @@ export async function POST(request: Request) {
     ) {
       return json({
         message: origin
-          ? "Encontré tu punto de partida. Confírmalo en el mapa para usarlo en la ruta."
+          ? `La ruta saldrá desde ${origin.name} hacia las visitas que elijas. Puedes cambiar la salida con un pin en el mapa.`
           : mode === "gemini"
             ? /\b\d+(?:[.,]\d+)?\s*(?:km|kilometros?|metros?)\b|linea recta/.test(
                 normalize(message),
@@ -229,6 +241,14 @@ export async function POST(request: Request) {
     }
     const found = await discoverReachablePlaces(search);
     search = found.spec;
+    if (!origin && namedReference && search.reference && search.center) {
+      origin = {
+        query: namedReference,
+        name: search.reference.name,
+        coordinates: search.center,
+        confirmed: true,
+      };
+    }
     const context =
       search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ") +
       (search.reference
@@ -255,7 +275,9 @@ export async function POST(request: Request) {
           context +
           ". " +
           suggestions +
-          ". Elige las que quieras visitar y visualiza tu recorrido dentro de la app."
+          ". " +
+          (origin ? `La ruta saldrá desde ${origin.name}. ` : "") +
+          "Elige las que quieras visitar y visualiza tu recorrido dentro de la app."
         : "No encontré coincidencias con estos filtros. Podemos ampliar el radio o cambiar la zona.",
       profile: input.profile,
       itinerary,

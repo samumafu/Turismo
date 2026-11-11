@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import {
   ArrowUpRight,
   LocateFixed,
+  MapPin,
   LoaderCircle,
   Route,
   X,
@@ -13,6 +14,7 @@ import {
   directionsLink,
   searchZones,
   formatDistance,
+  coordinateSchema,
   type Place,
 } from "@/lib/places";
 import PlaceMap from "@/components/discovery/place-map";
@@ -49,6 +51,23 @@ function RoutingMap({
 }) {
   const { state, location, actions } = usePlanner();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pickingOrigin, setPickingOrigin] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const { setPinnedOrigin } = actions;
+  const { clear: clearLocation } = location;
+  const pickOrigin = useCallback(
+    (coordinates: [number, number]) => {
+      if (!coordinateSchema.safeParse(coordinates).success) {
+        setPinError("Elige un punto dentro de la región de Nariño.");
+        return;
+      }
+      clearLocation();
+      setPinnedOrigin(coordinates);
+      setPickingOrigin(false);
+      setPinError(null);
+    },
+    [setPinnedOrigin, clearLocation],
+  );
   const [mode, setMode] = useState<Mode>(
     state.profile.transport === "carro"
       ? "driving"
@@ -80,9 +99,13 @@ function RoutingMap({
     () => (destination ? [destination] : stops),
     [stops, destination],
   );
-  const position = state.origin?.confirmed
-    ? { coordinates: state.origin.coordinates, accuracy: 0 }
-    : location.position;
+  const position = useMemo(
+    () =>
+      state.origin?.confirmed
+        ? { coordinates: state.origin.coordinates, accuracy: 0 }
+        : location.position,
+    [state.origin, location.position],
+  );
   const originLabel = state.origin?.confirmed
     ? state.origin.name
     : "Tu ubicación GPS";
@@ -155,8 +178,9 @@ function RoutingMap({
         <Button
           variant="outline"
           onClick={() => {
-            actions.clearOrigin();
-            location.request();
+            setPickingOrigin(false);
+            // Keep the chosen departure if GPS fails; prefer GPS once it succeeds.
+            location.request(actions.clearOrigin);
           }}
           disabled={location.busy}
         >
@@ -168,8 +192,19 @@ function RoutingMap({
           {location.busy
             ? "Obteniendo ubicación…"
             : location.position
-              ? "Actualizar mi ubicación GPS"
-              : "Usar mi ubicación y trazar ruta"}
+              ? "Usar mi GPS"
+              : "Usar mi ubicación"}
+        </Button>
+        <Button
+          variant={pickingOrigin ? "secondary" : "outline"}
+          aria-pressed={pickingOrigin}
+          onClick={() => {
+            setPickingOrigin((value) => !value);
+            setPinError(null);
+          }}
+        >
+          <MapPin data-icon="inline-start" aria-hidden="true" />
+          {pickingOrigin ? "Cancelar pin" : "Poner pin de salida"}
         </Button>
         {location.position ? (
           <Button
@@ -177,31 +212,32 @@ function RoutingMap({
             size="icon"
             aria-label="Dejar de usar ubicación"
             title="Dejar de usar ubicación"
-            onClick={() => {
-              location.clear();
-              actions.clearOrigin();
-            }}
+            onClick={location.clear}
           >
             <X aria-hidden="true" />
           </Button>
         ) : null}
       </div>
       {state.origin ? (
-        <Alert>
-          <AlertDescription>
-            <p>Salida: {state.origin.name}</p>
-            <p>
-              {state.origin.coordinates.map((n) => n.toFixed(5)).join(", ")}
-            </p>
+        <Alert className="mb-3.5" role="status">
+          <AlertDescription className="flex items-center gap-3">
+            <span className="min-w-0">
+              Salida: <strong>{state.origin.name}</strong>
+            </span>
             {!state.origin.confirmed ? (
               <Button size="sm" onClick={actions.confirmOrigin}>
                 Usar como punto de partida
               </Button>
-            ) : (
-              <p>Punto de partida confirmado</p>
-            )}{" "}
-            <Button variant="ghost" size="sm" onClick={actions.clearOrigin}>
-              Descartar dirección
+            ) : null}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Quitar punto de partida"
+              title="Quitar punto de partida"
+              className="ml-auto shrink-0"
+              onClick={actions.clearOrigin}
+            >
+              <X aria-hidden="true" />
             </Button>
           </AlertDescription>
         </Alert>
@@ -211,12 +247,23 @@ function RoutingMap({
           {stops.length >= 2
             ? "El recorrido empieza en tu primera visita. Para incluir el trayecto desde donde estás, "
             : "Para trazar la ruta hasta esta visita, "}
-          activa tu ubicación o indica en el chat desde dónde saldrás.
+          usa tu ubicación, coloca un pin o indica en el chat desde dónde
+          saldrás.
         </p>
       ) : null}
-      {location.error && !state.origin?.confirmed ? (
+      {pinError ? (
         <Alert variant="destructive">
-          <AlertDescription>{location.error}</AlertDescription>
+          <AlertDescription>{pinError}</AlertDescription>
+        </Alert>
+      ) : null}
+      {location.error ? (
+        <Alert variant={state.origin?.confirmed ? "default" : "destructive"}>
+          <AlertDescription>
+            {location.error}
+            {state.origin?.confirmed
+              ? " Se conserva el punto de partida elegido."
+              : " Puedes colocar un pin en el mapa."}
+          </AlertDescription>
         </Alert>
       ) : null}
       <PlaceMap
@@ -228,6 +275,7 @@ function RoutingMap({
         selectionLabel="Añadir a mi itinerario"
         position={position}
         originLabel={originLabel}
+        onPickOrigin={pickingOrigin ? pickOrigin : undefined}
         routeCoordinates={current?.data?.geometry.coordinates}
       />
       {stops.length ? (
@@ -368,7 +416,7 @@ export default function JourneyMap() {
     <div className="map-panel">
       <div className="map-heading">
         <h2>{itinerary ? "Tu recorrido" : "Mapa de Nariño"}</h2>
-        {itinerary ? (
+        {itinerary && itinerary.days.length > 1 ? (
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="map-day">Jornada en el mapa</FieldLabel>

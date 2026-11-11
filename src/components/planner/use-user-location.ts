@@ -14,7 +14,7 @@ export function useUserLocation() {
     },
     [],
   );
-  const request = useCallback(() => {
+  const request = useCallback((onLocated?: () => void) => {
     if (pending.current) return;
     if (!window.isSecureContext || !navigator.geolocation) {
       setError(
@@ -48,6 +48,7 @@ export function useUserLocation() {
           coordinates: [coords.latitude, coords.longitude],
           accuracy: coords.accuracy,
         });
+        onLocated?.();
       },
       (e) => {
         if (current !== generation.current) return;

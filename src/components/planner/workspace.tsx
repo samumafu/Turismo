@@ -23,35 +23,93 @@ const JourneyMap = dynamic(() => import("./journey-map"), {
 function Workspace() {
   const { state } = usePlanner();
   const [view, setView] = useState("map");
+  const [mobileSection, setMobileSection] = useState("chat");
   const [advanced, setAdvanced] = useState(false);
   useEffect(() => {
-    queueMicrotask(() => setView("map"));
+    function followSectionLink(event?: MouseEvent) {
+      const target = event?.target;
+      const href =
+        target instanceof Element
+          ? target.closest("a")?.getAttribute("href")
+          : window.location.href;
+      if (!href) return;
+      const url = new URL(href, window.location.href);
+      if (
+        url.origin !== window.location.origin ||
+        url.pathname !== window.location.pathname
+      )
+        return;
+      const hash = url.hash;
+      if (hash === "#chat-viaje") setMobileSection("chat");
+      if (hash === "#mi-itinerario") {
+        setMobileSection("map");
+        setView("map");
+      }
+    }
+    queueMicrotask(() => followSectionLink());
+    document.addEventListener("click", followSectionLink);
+    return () => document.removeEventListener("click", followSectionLink);
+  }, []);
+  useEffect(() => {
+    if (!state.results.length) return;
+    queueMicrotask(() => {
+      setView("map");
+      setMobileSection("map");
+    });
   }, [state.results]);
   useEffect(() => {
-    if (state.origin && !state.origin.confirmed)
-      queueMicrotask(() => setView("map"));
+    if (state.origin)
+      queueMicrotask(() => {
+        setView("map");
+        setMobileSection("map");
+      });
   }, [state.origin]);
   useEffect(() => {
     if (!state.routeRequest) return;
     queueMicrotask(() => {
       setView("map");
+      setMobileSection("map");
       document
         .getElementById("mi-itinerario")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [state.routeRequest]);
   return (
-    <div className="workspace">
+    <div className="workspace" data-mobile-section={mobileSection}>
       <nav
         className="workspace-navigation"
         aria-label="Ir a una sección del planificador"
       >
-        <Button variant="outline" render={<a href="#chat-viaje" />}>
-          <MessageCircle aria-hidden="true" /> Conversar
+        <Button
+          variant={mobileSection === "chat" ? "secondary" : "ghost"}
+          aria-current={mobileSection === "chat" ? "page" : undefined}
+          aria-controls="chat-viaje"
+          onClick={() => setMobileSection("chat")}
+        >
+          <MessageCircle data-icon="inline-start" aria-hidden="true" />{" "}
+          Conversar
         </Button>
-        <Button variant="outline" render={<a href="#mi-itinerario" />}>
-          <Map aria-hidden="true" /> Ver mapa
-          {state.results.length ? ` (${state.results.length})` : ""}
+        <Button
+          variant={mobileSection === "map" ? "secondary" : "ghost"}
+          aria-current={mobileSection === "map" ? "page" : undefined}
+          aria-controls="mi-itinerario"
+          onClick={() => {
+            setMobileSection("map");
+            setView("map");
+          }}
+        >
+          <Map data-icon="inline-start" aria-hidden="true" /> Mapa
+        </Button>
+        <Button
+          variant={mobileSection === "itinerary" ? "secondary" : "ghost"}
+          aria-current={mobileSection === "itinerary" ? "page" : undefined}
+          aria-controls="mi-itinerario"
+          onClick={() => {
+            setMobileSection("itinerary");
+            setView("itinerary");
+          }}
+        >
+          <List data-icon="inline-start" aria-hidden="true" /> Itinerario
         </Button>
       </nav>
       <div className="planner-layout">
@@ -80,15 +138,13 @@ function Workspace() {
                 />
                 {advanced ? "Cerrar filtros" : "Filtros de búsqueda"}
               </Button>
-              <a className="mobile-chat-link" href="#chat-viaje">
-                Volver al chat
-              </a>
             </div>
             {advanced ? (
               <div className="advanced-search" id="advanced-search-panel">
                 <AdvancedExplorer
                   onComplete={() => {
                     setView("map");
+                    setMobileSection("map");
                     setAdvanced(false);
                     document
                       .getElementById("mi-itinerario")
@@ -105,6 +161,7 @@ function Workspace() {
               <PlaceOptions
                 onViewItinerary={() => {
                   setView("itinerary");
+                  setMobileSection("itinerary");
                   document
                     .getElementById("mi-itinerario")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -206,9 +206,7 @@
   max-width: 1600px;
   margin-inline: auto;
 }
-.workspace-navigation,
-.mobile-chat-link,
-.mobile-plan-link {
+.workspace-navigation {
   display: none;
 }
 .planner-layout {
@@ -394,6 +392,21 @@
   inset: 20px;
   pointer-events: none;
 }
+.map-pin-picker {
+  position: absolute;
+  inset: auto 12px 34px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 3px 14px #1c292626;
+  font-size: 12px;
+}
 .map-route-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -481,6 +494,20 @@
   border: 3px solid white;
   border-radius: 50%;
   background: #17678a;
+}
+.google-origin-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 8px #1c29264d;
+}
+.google-origin-pin::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: white;
 }
 .map-place-detail {
   position: absolute;
@@ -1247,31 +1274,37 @@
     gap: 20px;
   }
   .workspace-navigation {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    position: sticky;
+    top: 88px;
+    z-index: 10;
+    gap: 4px;
+    padding: 5px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
   }
-  .workspace-navigation > a {
-    flex: 1;
+  .workspace-navigation > button {
     min-width: 0;
-    padding-inline: 10px;
+    padding-inline: 6px;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .workspace[data-mobile-section="chat"] .journey-panel,
+  .workspace:not([data-mobile-section="chat"]) .chat-panel {
+    display: none;
+  }
+  .journey-toolbar [data-slot="tabs-list"] {
+    display: none;
+  }
+  .journey-toolbar {
+    justify-content: flex-end;
   }
   .chat-panel {
     position: static;
-    height: clamp(420px, 64dvh, 620px);
-  }
-  .mobile-plan-link,
-  .mobile-chat-link {
-    display: inline-flex;
-    align-items: center;
-    min-height: 32px;
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--primary);
-    text-decoration: underline;
-  }
-  .mobile-chat-link {
-    margin: 0;
+    height: max(420px, calc(100dvh - 200px));
   }
   .workspace [data-slot="button"],
   .workspace [data-slot="tabs-trigger"] {
@@ -1307,7 +1340,8 @@
     width: calc(100% - 32px);
   }
   .header-inner {
-    min-height: 112px;
+    height: 100px;
+    min-height: 100px;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 10px 12px;
@@ -1333,8 +1367,7 @@
     font-size: 16px;
   }
   .header-title p {
-    font-size: 11px;
-    margin-top: 4px;
+    display: none;
   }
   .header-account {
     grid-column: 2;
@@ -1348,6 +1381,17 @@
     padding: 18px max(12px, env(safe-area-inset-right))
       max(35px, env(safe-area-inset-bottom))
       max(12px, env(safe-area-inset-left));
+  }
+  .workspace-navigation {
+    top: 100px;
+  }
+  .workspace-navigation > button {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+  }
+  .chat-panel {
+    height: max(400px, calc(100dvh - 205px));
   }
   .chat-panel,
   .journey-panel {
@@ -1380,11 +1424,6 @@
     font-size: 11px;
     padding-inline: 8px;
   }
-  .mobile-chat-link {
-    flex-basis: 100%;
-    justify-content: flex-end;
-    min-height: 24px;
-  }
   .map-panel,
   .place-options,
   .itinerary-panel,
@@ -1400,6 +1439,15 @@
   }
   .map-route-fields {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .map-location-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .map-location-actions > button {
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 12px;
   }
   .map-actions > a {
     width: 100%;
@@ -1494,7 +1542,7 @@
 }
 @media (max-width: 380px) {
   .chat-panel {
-    height: clamp(460px, 72dvh, 560px);
+    height: max(360px, calc(100dvh - 205px));
   }
   .chat-suggestions {
     display: none;

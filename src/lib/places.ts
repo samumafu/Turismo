@@ -130,6 +130,17 @@ export const searchSpecSchema = z.object({
   regionalFood: z.boolean().default(false),
 });
 export type SearchSpec = z.infer<typeof searchSpecSchema>;
+// A named reference can also be the departure for routes to chosen visits.
+export function locationReference(text: string): string | undefined {
+  const match =
+    text.match(
+      /\b(?:cerca(?:no|na|nos|nas)?\s+(?:del?|a)|alrededor\s+de|junto\s+a)\s+(?:(?:la|el|los|las)\s+)?(.+?)(?:[.!?,]|\s+(?:y\s+)?(?:quiero|busca|busco|necesito|me gustar[ií]a)\b|$)/i,
+    ) ??
+    text.match(
+      /\ben\s+(?:(?:la|el)\s+)?((?:universidad|campus|hospital|terminal|aeropuerto|plaza|parque|hotel|colegio)\s+.+?)(?:[.!?,]|\s+(?:y\s+)?(?:quiero|busca|busco|necesito|me gustar[ií]a)\b|$)/i,
+    );
+  return match?.[1].trim().slice(0, 160);
+}
 export const searchRequestSchema = z.object({
   text: z.string().trim().max(300).default(""),
   spec: searchSpecSchema.default(searchSpecSchema.parse({})),
@@ -276,15 +287,13 @@ export function interpretSearch(
     )
   )
     spec.name = text.trim().slice(0, 80);
-  const nearby = text.match(
-    /\b(?:cerca(?:no|na|nos|nas)?\s+(?:del?|a)|alrededor\s+de|junto\s+a)\s+(?:(?:la|el|los|las)\s+)?(.+?)(?:[.!?]|$)/i,
-  );
+  const nearby = locationReference(text);
   if (zone && detected.length && !nearby) {
     spec.near = undefined;
     spec.reference = undefined;
   }
   if (nearby && detected.length) {
-    const near = nearby[1].trim().slice(0, 160);
+    const near = nearby;
     if (normalize(near) !== normalize(previous.near ?? "")) {
       spec.center = undefined;
       spec.reference = undefined;

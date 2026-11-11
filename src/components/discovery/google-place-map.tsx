@@ -41,6 +41,7 @@ export default function GooglePlaceMap({
   selectedIds = [],
   position,
   originLabel = "Tu ubicación",
+  onPickOrigin,
   routeCoordinates,
 }: PlaceMapProps) {
   const element = useRef<HTMLDivElement>(null);
@@ -111,6 +112,24 @@ export default function GooglePlaceMap({
     return () => listener.remove();
   }, [runtime, onMove]);
   useEffect(() => {
+    if (!runtime || !onPickOrigin) return;
+    runtime.map.setOptions({
+      draggableCursor: "crosshair",
+      clickableIcons: false,
+    });
+    const listener = runtime.map.addListener(
+      "click",
+      (event: google.maps.MapMouseEvent) => {
+        if (event.latLng)
+          onPickOrigin([event.latLng.lat(), event.latLng.lng()]);
+      },
+    );
+    return () => {
+      listener.remove();
+      runtime.map.setOptions({ draggableCursor: null, clickableIcons: true });
+    };
+  }, [runtime, onPickOrigin]);
+  useEffect(() => {
     if (!runtime) return;
     runtime.map.setCenter({ lat: latitude, lng: longitude });
     runtime.map.setZoom(radius > 15000 ? 10 : radius > 6000 ? 12 : 14);
@@ -131,9 +150,10 @@ export default function GooglePlaceMap({
         content,
         gmpClickable: true,
       });
-      marker.addEventListener("gmp-click", () =>
-        setPopup((current) => (current === place.id ? null : place.id)),
-      );
+      marker.addEventListener("gmp-click", () => {
+        if (onPickOrigin) onPickOrigin(place.coordinates);
+        else setPopup((current) => (current === place.id ? null : place.id));
+      });
       return marker;
     });
     return () => {
@@ -143,14 +163,14 @@ export default function GooglePlaceMap({
         marker.map = null;
       }
     };
-  }, [runtime, places]);
+  }, [runtime, places, onPickOrigin]);
   useEffect(() => {
     for (const [id, content] of markerNodes.current)
       content.classList.toggle(
         "google-place-marker-selected",
         selectedIds.includes(id),
       );
-  }, [runtime, places, selectedIds]);
+  }, [runtime, places, selectedIds, onPickOrigin]);
   useEffect(() => {
     if (!runtime) return;
     const overlays: { setMap: (map: google.maps.Map | null) => void }[] = [];
@@ -184,7 +204,10 @@ export default function GooglePlaceMap({
         }),
       );
       const content = document.createElement("span");
-      content.className = "google-origin-marker";
+      content.className =
+        position.accuracy === 0
+          ? "google-origin-marker google-origin-pin"
+          : "google-origin-marker";
       content.setAttribute("aria-label", originLabel);
       const marker = new runtime.markers.AdvancedMarkerElement({
         map: runtime.map,
@@ -240,7 +263,22 @@ export default function GooglePlaceMap({
         </Alert>
       ) : null}
       <div ref={element} className="google-map" />
-      {activePlace ? (
+      {onPickOrigin && runtime ? (
+        <div className="map-pin-picker" role="status">
+          <p>Toca el mapa para colocar tu punto de partida.</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              const point = runtime.map.getCenter();
+              if (point) onPickOrigin([point.lat(), point.lng()]);
+            }}
+          >
+            Usar el centro del mapa
+          </Button>
+        </div>
+      ) : null}
+      {activePlace && !onPickOrigin ? (
         <aside
           className="map-place-detail"
           aria-label={"Ficha de " + activePlace.name}

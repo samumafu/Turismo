@@ -78,14 +78,48 @@ test("chat searches near a reference and resolves an origin without failing on s
       assert.equal(result.search?.reference?.id, `google:${reference.id}`);
       assert.deepEqual(result.places[0].coordinates, [1.2146, -77.2783]);
       assert.ok(result.places[0].verification);
-    });
-    await t.test("an explicit origin can be confirmed on the map", async () => {
-      const response = await send("Salgo desde Campus de prueba en Pasto");
-      assert.equal(response.status, 200);
-      const result = chatResponseSchema.parse(await response.json());
       assert.equal(result.origin?.name, reference.displayName.text);
-      assert.equal(result.origin?.confirmed, false);
+      assert.equal(result.origin?.confirmed, true);
+      assert.deepEqual(result.origin?.coordinates, [1.2146, -77.2783]);
     });
+    await t.test(
+      "a university mentioned with en becomes the route origin",
+      async () => {
+        const response = await send(
+          "Busca cafeterías en la Universidad de prueba en Pasto",
+        );
+        assert.equal(response.status, 200);
+        const result = chatResponseSchema.parse(await response.json());
+        assert.equal(result.search?.reference?.id, `google:${reference.id}`);
+        assert.equal(result.origin?.confirmed, true);
+        assert.equal(result.origin?.name, reference.displayName.text);
+        assert.equal(result.selectedIds?.length, 0);
+      },
+    );
+    await t.test(
+      "an explicit origin starts routes from the resolved point",
+      async () => {
+        const response = await send("Salgo desde Campus de prueba en Pasto");
+        assert.equal(response.status, 200);
+        const result = chatResponseSchema.parse(await response.json());
+        assert.equal(result.origin?.name, reference.displayName.text);
+        assert.equal(result.origin?.confirmed, true);
+      },
+    );
+    await t.test(
+      "a nearby location statement sets the departure without accepting visits",
+      async () => {
+        const response = await send(
+          "Estoy cerca de la Universidad de prueba en Pasto",
+        );
+        assert.equal(response.status, 200);
+        const result = chatResponseSchema.parse(await response.json());
+        assert.equal(result.origin?.confirmed, true);
+        assert.equal(result.origin?.name, reference.displayName.text);
+        assert.deepEqual(result.selectedIds, []);
+        assert.equal(result.itinerary, null);
+      },
+    );
     await t.test("an unlocated reference requests clarification", async () => {
       mode = "unlocated";
       const response = await send(

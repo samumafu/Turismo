@@ -223,11 +223,6 @@ export function ChatPanel() {
             </Field>
           </FieldGroup>
         </form>
-        {state.itinerary || state.results.length ? (
-          <a className="mobile-plan-link" href="#mi-itinerario">
-            Ver mapa e itinerario ↓
-          </a>
-        ) : null}
       </div>
     </section>
   );

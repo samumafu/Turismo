@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   use,
   useEffect,
   useRef,
@@ -21,6 +22,7 @@ import { acceptedJourney } from "@/lib/accepted-journey";
 import { useUserLocation } from "./use-user-location";
 import {
   placeSchema,
+  coordinateSchema,
   searchSpecSchema,
   searchResponseSchema,
   type Place,
@@ -63,6 +65,7 @@ type PlannerContextValue = {
     movePlace: (id: string, direction: number) => void;
     confirmOrigin: () => void;
     clearOrigin: () => void;
+    setPinnedOrigin: (coordinates: [number, number]) => void;
     reset: () => void;
     restore: () => void;
     loadJourney: (snapshot: JourneySnapshot) => Promise<boolean>;
@@ -97,6 +100,19 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initial);
   const lock = useRef(false);
   const undo = useRef<State | null>(null);
+  const setPinnedOrigin = useCallback((coordinates: [number, number]) => {
+    const parsed = coordinateSchema.safeParse(coordinates);
+    if (!parsed.success) return;
+    setState((s) => ({
+      ...s,
+      origin: {
+        query: "Punto elegido en el mapa",
+        name: "Pin en el mapa",
+        coordinates: parsed.data,
+        confirmed: true,
+      },
+    }));
+  }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     let linkedSearch: SearchSpec | undefined;
@@ -484,6 +500,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           movePlace,
           confirmOrigin,
           clearOrigin,
+          setPinnedOrigin,
         },
         meta: { maxMessageLength: 2500 },
       }}
