@@ -57,18 +57,22 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
           },
           { status: 429 },
         );
-      const data = JSON.parse(JSON.parse(String(init?.body)).input);
+      const requestBody = JSON.parse(
+        url instanceof Request ? await url.text() : String(init?.body),
+      );
+      const data = JSON.parse(requestBody.input);
       const last = data.messages.at(-1).content;
       const result = {
+        scope: last === "Explica la fotosíntesis" ? "out_of_scope" : "app",
         action:
           last === "Hola"
             ? "clarify"
-            : /Organiza|Elijo/.test(last)
+            : /Organiza|Elijo|Ahora busca/.test(last)
               ? "plan"
               : "explore",
         message:
           last === "Hola"
-            ? "El trayecto es de 500 metros en línea recta."
+            ? "El trayecto es de 500 metros en línea recta. RESPUESTA AJENA A LA APP"
             : "Elige los lugares que quieras visitar.",
         profile: data.previousProfile,
         zone: "pasto",
@@ -135,6 +139,36 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     });
     assert.deepEqual(accepted.selectedIds, [options.places[0].id]);
     assert.ok(!JSON.stringify(accepted.itinerary).includes("999999999"));
+    now += 61000;
+    const beforeNewSearch = mapsCalls;
+    const newSearch = await call({
+      messages: [{ role: "user", content: "Ahora busca museos en Ipiales" }],
+      selectedIds: chosen,
+      knownPlaces: options.places,
+      itinerary: plan.itinerary,
+      search: options.search,
+    });
+    assert.equal(newSearch.mode, "gemini", newSearch.notice ?? undefined);
+    assert.equal(newSearch.action, "explore");
+    assert.ok(newSearch.discovery);
+    assert.equal(newSearch.search?.zone, "ipiales");
+    assert.deepEqual(newSearch.search?.categories, ["museos"]);
+    assert.deepEqual(newSearch.places, []);
+    assert.deepEqual(itineraryIds(newSearch.itinerary), chosen);
+    assert.ok(mapsCalls > beforeNewSearch);
+    const beforeOffTopic = mapsCalls;
+    const offTopic = await call({
+      messages: [{ role: "user", content: "Explica la fotosíntesis" }],
+      selectedIds: chosen,
+      knownPlaces: options.places,
+      itinerary: plan.itinerary,
+      search: options.search,
+    });
+    assert.equal(offTopic.preserveState, true);
+    assert.match(offTopic.message, /Solo puedo ayudarte con Turismo Nariño/);
+    assert.equal(mapsCalls, beforeOffTopic);
+    assert.deepEqual(offTopic.itinerary, plan.itinerary);
+    assert.doesNotMatch(hello.message, /RESPUESTA AJENA/);
     now += 61000;
     quota = true;
     const fallback = await call({

@@ -41,6 +41,7 @@ export default function GooglePlaceMap({
   selectedIds = [],
   position,
   originLabel = "Tu ubicación",
+  fitPosition = true,
   onPickOrigin,
   routeCoordinates,
 }: PlaceMapProps) {
@@ -192,7 +193,7 @@ export default function GooglePlaceMap({
         lat: position.coordinates[0],
         lng: position.coordinates[1],
       };
-      points.push(point);
+      if (fitPosition) points.push(point);
       overlays.push(
         new runtime.maps.Circle({
           map: runtime.map,
@@ -242,7 +243,7 @@ export default function GooglePlaceMap({
     return () => {
       for (const overlay of overlays) overlay.setMap(null);
     };
-  }, [runtime, places, position, originLabel, routeCoordinates]);
+  }, [runtime, places, position, originLabel, routeCoordinates, fitPosition]);
   const activePlace = places.find((place) => place.id === popup);
   useEffect(() => {
     if (popup)

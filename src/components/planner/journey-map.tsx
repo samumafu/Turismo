@@ -77,6 +77,12 @@ function RoutingMap({
   );
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
+    queueMicrotask(() => {
+      setSelectedId(null);
+      setPickingOrigin(false);
+    });
+  }, [state.mapRevision, state.routeRequest]);
+  useEffect(() => {
     const transport = state.profile.transport;
     queueMicrotask(() =>
       setMode(
@@ -167,7 +173,7 @@ function RoutingMap({
     };
   }, [query, attempt]);
   const center =
-    position?.coordinates ??
+    (stops.length || !state.discovery ? position?.coordinates : undefined) ??
     ([...(state.search.center ?? searchZones[state.search.zone].center)] as [
       number,
       number,
@@ -275,6 +281,7 @@ function RoutingMap({
         selectionLabel="Añadir a mi itinerario"
         position={position}
         originLabel={originLabel}
+        fitPosition={!!stops.length || !state.discovery}
         onPickOrigin={pickingOrigin ? pickOrigin : undefined}
         routeCoordinates={current?.data?.geometry.coordinates}
       />
@@ -392,12 +399,11 @@ export default function JourneyMap() {
     (itinerary?.days.length ?? 1) - 1,
   );
   const stops = useMemo(() => {
-    if (!itinerary) return [];
     const byId = new Map(state.places.map((p) => [p.id, p]));
-    return itinerary.days[selectedDay].stops
-      .map((s) => byId.get(s.placeId))
+    return state.routeIds
+      .map((id) => byId.get(id))
       .filter((p): p is Place => !!p);
-  }, [itinerary, selectedDay, state.places]);
+  }, [state.routeIds, state.places]);
   const places = useMemo(() => {
     if (state.routeRequest && stops.length) return stops;
     if (
@@ -415,7 +421,7 @@ export default function JourneyMap() {
   return (
     <div className="map-panel">
       <div className="map-heading">
-        <h2>{itinerary ? "Tu recorrido" : "Mapa de Nariño"}</h2>
+        <h2>{stops.length ? "Tu recorrido" : "Mapa de Nariño"}</h2>
         {itinerary && itinerary.days.length > 1 ? (
           <FieldGroup>
             <Field>
@@ -436,7 +442,11 @@ export default function JourneyMap() {
           </FieldGroup>
         ) : null}
       </div>
-      <RoutingMap places={places} planned={!!itinerary} stops={stops} />
+      <RoutingMap
+        places={places}
+        planned={stops.length > 1 || !!state.routeRequest}
+        stops={stops}
+      />
     </div>
   );
 }

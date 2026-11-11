@@ -35,6 +35,7 @@ export async function POST(request: Request) {
         "Revisa los datos de la conversación y del viaje.",
       );
     const input = parsed.data;
+    const originalProfile = input.profile;
     const last = input.messages.at(-1)!.content;
     const text = normalize(last);
     let search = interpretSearch(
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
             )
           ? "plan"
           : "clarify";
-    let message = draft.message;
+    const requestedAction = action;
     const key = input.demo ? undefined : process.env.GEMINI_API_KEY?.trim();
     let mode: ChatResponse["mode"] = key ? "gemini" : "demo";
     let notice: string | null = key ? null : "Modo sin IA.";
@@ -77,10 +78,22 @@ export async function POST(request: Request) {
     if (key) {
       try {
         const intent = await interpretDiscovery(input, key, search);
+        if (intent.scope === "out_of_scope") {
+          return json({
+            message:
+              "Solo puedo ayudarte con Turismo Nariño: buscar lugares, organizar visitas y rutas, usar el mapa o gestionar tus viajes en la app. ¿Qué quieres hacer en tu viaje?",
+            action: "clarify",
+            preserveState: true,
+            profile: originalProfile,
+            itinerary: input.itinerary,
+            mode,
+            notice,
+            places: [],
+          });
+        }
         search = intent.search;
         input.profile = intent.profile;
         action = intent.action;
-        message = intent.message;
         proposedItinerary = intent.itinerary ?? input.itinerary;
         if (selectionIntent) {
           add = intent.selection?.add ?? [];
@@ -99,6 +112,10 @@ export async function POST(request: Request) {
       radius: explicit.radius,
       travelMode: explicit.travelMode,
       categories: explicit.categories,
+      zone: explicit.zone,
+      near: explicit.near,
+      center: explicit.center,
+      reference: explicit.reference,
       ...(namedReference
         ? {
             near: namedReference,
@@ -147,6 +164,18 @@ export async function POST(request: Request) {
     }
     add = add.filter((id) => named.has(id));
     remove = remove.filter((id) => named.has(id));
+    const discoveryIntent =
+      !add.length &&
+      !remove.length &&
+      (/\b(?:busca|busco|buscar|encuentra|recomienda|muestra|opciones|otros|otras|nuevos|nuevas)\b/.test(
+        text,
+      ) ||
+        (requestedAction === "explore" &&
+          !/organiza|ordena|horario|duracion|presupuesto|agenda|itinerario/.test(
+            text,
+          ))) &&
+      !/como llegar|traza|trazar/.test(text);
+    if (discoveryIntent) action = "explore";
     const knownIds = new Set(known.map((p) => p.id));
     const selectedIds = [
       ...new Set([
@@ -155,7 +184,9 @@ export async function POST(request: Request) {
       ]),
     ].slice(0, 25);
     const selected = selectedIds.length
-      ? await resolvePlaces(selectedIds, known)
+      ? discoveryIntent
+        ? known.filter((place) => selectedIds.includes(place.id))
+        : await resolvePlaces(selectedIds, known)
       : [];
     const itinerary = acceptedJourney(selectedIds, selected, proposedItinerary);
     let origin: ChatResponse["origin"];
@@ -176,6 +207,7 @@ export async function POST(request: Request) {
           name: resolved.reference!.name,
           coordinates: resolved.center!,
           confirmed: true,
+          source: "reference",
         };
         search = {
           ...search,
@@ -214,6 +246,7 @@ export async function POST(request: Request) {
     if (
       action === "clarify" ||
       (origin &&
+        !discoveryIntent &&
         !/busca|encuentra|recomienda|quiero (?:ir|visitar|un|una)|me gustaria/.test(
           text,
         ))
@@ -221,13 +254,7 @@ export async function POST(request: Request) {
       return json({
         message: origin
           ? `La ruta saldrá desde ${origin.name} hacia las visitas que elijas. Puedes cambiar la salida con un pin en el mapa.`
-          : mode === "gemini"
-            ? /\b\d+(?:[.,]\d+)?\s*(?:km|kilometros?|metros?)\b|linea recta/.test(
-                normalize(message),
-              )
-              ? "Para comprobar la distancia por calles, dime desde dónde sales y a qué lugar quieres ir."
-              : message
-            : "¿Qué te gustaría buscar? Puedes elegir los lugares antes de organizar tu recorrido.",
+          : "Puedo ayudarte a buscar lugares en Nariño, organizar tus visitas y trazar rutas. Usa un pin o el GPS para elegir la salida, selecciona tus visitas en el mapa y consulta o guarda el itinerario desde tu cuenta. ¿Qué quieres buscar o ajustar?",
         profile: input.profile,
         itinerary,
         action: "clarify",
@@ -247,6 +274,7 @@ export async function POST(request: Request) {
         name: search.reference.name,
         coordinates: search.center,
         confirmed: true,
+        source: "reference",
       };
     }
     const context =

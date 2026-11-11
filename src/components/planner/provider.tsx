@@ -53,6 +53,8 @@ type State = {
   error: string | null;
   routeDay: number;
   routeRequest: number;
+  routeIds: string[];
+  mapRevision: number;
 };
 type PlannerContextValue = {
   location: ReturnType<typeof useUserLocation>;
@@ -93,6 +95,8 @@ const initial: State = {
   error: null,
   routeDay: 0,
   routeRequest: 0,
+  routeIds: [],
+  mapRevision: 0,
 };
 
 export function PlannerProvider({ children }: { children: ReactNode }) {
@@ -110,6 +114,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         name: "Pin en el mapa",
         coordinates: parsed.data,
         confirmed: true,
+        source: "pin",
       },
     }));
   }, []);
@@ -184,6 +189,18 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         );
       const result = chatResponseSchema.parse(body);
       setState((s) => {
+        const messagesWithReply = [
+          ...messages,
+          { role: "assistant", content: result.message },
+        ].slice(-16) as ChatMessage[];
+        if (result.preserveState)
+          return {
+            ...s,
+            messages: messagesWithReply,
+            mode: result.mode,
+            notice: result.notice,
+            busy: false,
+          };
         const selectedIds = result.selectedIds ?? s.selectedIds;
         const places = [
           ...new Map(
@@ -194,7 +211,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
             (p) =>
               result.places.some((v) => v.id === p.id) ||
               selectedIds.includes(p.id) ||
-              s.results.some((v) => v.id === p.id),
+              (!result.discovery && s.results.some((v) => v.id === p.id)),
           )
           .slice(0, 100);
         return {
@@ -202,17 +219,27 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           action: result.action,
           results: result.discovery ? result.places : s.results,
           routeRequest: result.discovery ? 0 : s.routeRequest,
+          routeIds: result.discovery
+            ? []
+            : result.action === "plan"
+              ? selectedIds.slice(0, 5)
+              : s.routeIds,
+          routeDay: result.discovery ? 0 : s.routeDay,
+          mapRevision: result.discovery ? s.mapRevision + 1 : s.mapRevision,
           discovery: result.discovery ?? s.discovery,
           places,
           selectedIds,
           search: result.search ?? s.search,
           profile: result.profile,
-          itinerary: acceptedJourney(selectedIds, places, result.itinerary),
-          origin: result.origin ?? s.origin,
-          messages: [
-            ...messages,
-            { role: "assistant", content: result.message },
-          ].slice(-16) as ChatMessage[],
+          itinerary: acceptedJourney(
+            selectedIds,
+            places,
+            result.itinerary ?? s.itinerary,
+          ),
+          origin:
+            result.origin ??
+            (result.discovery && s.origin?.source !== "pin" ? null : s.origin),
+          messages: messagesWithReply,
           mode: result.mode,
           notice: result.notice,
           busy: false,
@@ -275,6 +302,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       ...s,
       routeDay: day,
       routeRequest: s.routeRequest + 1,
+      routeIds: s.itinerary?.days[day]?.stops.map((stop) => stop.placeId) ?? [],
     }));
   }
   function reset() {
@@ -341,6 +369,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         snapshot.itinerary,
       ),
       origin: null,
+      routeIds: acceptedIds.slice(0, 5),
+      routeRequest: 0,
+      routeDay: 0,
+      mapRevision: s.mapRevision + 1,
       discovery: undefined,
       messages: [greeting],
       notice:
@@ -352,13 +384,17 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
     }));
     return true;
   }
-  function discover(result: SearchResponse) {
+  function discover(result: SearchResponse, continuation = false) {
     if (lock.current) return;
     setState((s) => ({
       ...s,
       action: "explore",
       results: result.places,
-      routeRequest: 0,
+      routeRequest: continuation ? s.routeRequest : 0,
+      routeIds: continuation ? s.routeIds : [],
+      routeDay: continuation ? s.routeDay : 0,
+      mapRevision: continuation ? s.mapRevision : s.mapRevision + 1,
+      origin: continuation || s.origin?.source === "pin" ? s.origin : null,
       places: [
         ...new Map(
           [...s.places, ...result.places].map((p) => [p.id, p]),
@@ -404,12 +440,15 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       ].slice(0, 60);
       setState((s) => ({ ...s, busy: false }));
       lock.current = false;
-      discover({
-        ...result,
-        places,
-        total: places.length,
-        nextPageToken: places.length >= 60 ? null : result.nextPageToken,
-      });
+      discover(
+        {
+          ...result,
+          places,
+          total: places.length,
+          nextPageToken: places.length >= 60 ? null : result.nextPageToken,
+        },
+        true,
+      );
     } catch (error) {
       setState((s) => ({
         ...s,
@@ -437,6 +476,8 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         selectedIds,
         search,
         itinerary: acceptedJourney(selectedIds, s.places),
+        routeIds: ids.filter((id) => selectedIds.includes(id)).slice(0, 5),
+        routeRequest: 0,
       };
     });
   }
@@ -454,6 +495,10 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ...s,
         selectedIds,
         itinerary: acceptedJourney(selectedIds, s.places),
+        routeIds: selectedIds.includes(id)
+          ? [id]
+          : s.routeIds.filter((routeId) => routeId !== id),
+        routeRequest: 0,
       };
     });
   }
@@ -468,6 +513,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
       return {
         ...s,
         selectedIds: ids,
+        routeIds: ids.filter((id) => s.routeIds.includes(id)),
         itinerary: acceptedJourney(ids, s.places),
       };
     });

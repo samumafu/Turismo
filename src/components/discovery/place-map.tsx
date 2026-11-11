@@ -12,6 +12,7 @@ export type PlaceMapProps = {
   selectedIds?: string[];
   position?: { coordinates: [number, number]; accuracy: number } | null;
   originLabel?: string;
+  fitPosition?: boolean;
   onPickOrigin?: (coordinates: [number, number]) => void;
   routeCoordinates?: [number, number][];
 };

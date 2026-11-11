@@ -58,6 +58,7 @@ export const agreedOriginSchema = z.object({
     z.number().min(-79.5).max(-76.3),
   ]),
   confirmed: z.boolean(),
+  source: z.enum(["pin", "reference"]).optional(),
 });
 export const chatRequestSchema = z
   .object({
@@ -75,6 +76,7 @@ export const chatRequestSchema = z
     "El último mensaje debe ser del viajero.",
   );
 export const chatResponseSchema = modelResponseSchema.extend({
+  preserveState: z.boolean().optional(),
   action: z.enum(["explore", "plan", "clarify"]).default("plan"),
   mode: z.enum(["gemini", "demo"]),
   notice: z.string().max(400).nullable(),
