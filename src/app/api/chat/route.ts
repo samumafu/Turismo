@@ -9,6 +9,9 @@ import {
   searchZones,
   categoryLabels,
   locationReference,
+  currentLocationRequested,
+  departureSearchRequested,
+  pinRequested,
 } from "@/lib/places";
 import { resolvePlaces } from "@/lib/server/discovery";
 import { discoverReachablePlaces } from "@/lib/server/route-discovery";
@@ -62,15 +65,27 @@ export async function POST(request: Request) {
     input.knownPlaces = known;
     let add: string[] = [];
     let remove: string[] = [];
-    const namedReference = locationReference(last);
+    const fromDeparture =
+      departureSearchRequested(last) && requestedAction === "explore";
+    const namedReference = fromDeparture ? undefined : locationReference(last);
+    if (
+      fromDeparture &&
+      (!input.origin?.confirmed ||
+        (pinRequested(last) && input.origin.source !== "pin"))
+    )
+      throw new HttpError(
+        422,
+        "Pulsa «Poner pin de salida», elige un punto en el mapa y vuelve a enviar tu búsqueda.",
+      );
     let originQuery: string | undefined = namedReference;
     let proposedItinerary = input.itinerary;
     const originIntent =
-      /salgo|salimos|saldre|parto|partimos|punto de partida|comenzamos desde|inicio desde|mi direccion|salida es|saldremos|como salida|(?:estoy|estamos|me encuentro|nos encontramos) (?:en|cerca|junto)/.test(
+      !fromDeparture &&
+      (/salgo|salimos|saldre|parto|partimos|punto de partida|comenzamos desde|inicio desde|mi direccion|salida es|saldremos|como salida|(?:estoy|estamos|me encuentro|nos encontramos) (?:en|cerca|junto)/.test(
         text,
       ) ||
-      (!!namedReference &&
-        (input.selectedIds.length > 0 || action === "clarify"));
+        (!!namedReference &&
+          (input.selectedIds.length > 0 || action === "clarify")));
     const selectionIntent =
       /elijo|elige|acepto|escojo|me quedo|prefiero|quiero visitar|agrega|anade|incluye|quita|retira|elimina/.test(
         text,
@@ -128,15 +143,36 @@ export async function POST(request: Request) {
         ? { categories: explicit.categories, name: "" }
         : {}),
     };
+    if (fromDeparture && input.origin) {
+      search = {
+        ...search,
+        center: input.origin.coordinates,
+        near: undefined,
+        reference: undefined,
+        name: explicit.name,
+      };
+    }
     if (
       input.origin?.confirmed &&
-      /cerca|cercan|aqui|mi ubicacion/.test(text) &&
+      (/cerca|cercan/.test(text) || currentLocationRequested(last)) &&
       !search.near &&
       !Object.values(searchZones).some((zone) =>
         text.includes(normalize(zone.label.split(" / ")[0])),
       )
     )
       search.center = input.origin.coordinates;
+    if (
+      currentLocationRequested(last) &&
+      !search.near &&
+      !input.origin?.confirmed &&
+      !Object.values(searchZones).some((zone) =>
+        text.includes(normalize(zone.label.split(" / ")[0])),
+      )
+    )
+      throw new HttpError(
+        422,
+        "Activa tu ubicación o elige un pin de salida para buscar cerca de ti. También puedes indicar un municipio de Nariño.",
+      );
     if (selectionIntent && !add.length && !remove.length) {
       const matches = known
         .filter((p) => text.includes(normalize(p.name)))
@@ -189,7 +225,9 @@ export async function POST(request: Request) {
         : await resolvePlaces(selectedIds, known)
       : [];
     const itinerary = acceptedJourney(selectedIds, selected, proposedItinerary);
-    let origin: ChatResponse["origin"];
+    let origin: ChatResponse["origin"] = fromDeparture
+      ? input.origin
+      : undefined;
     if (originIntent) {
       originQuery ||= last
         .match(
@@ -281,7 +319,10 @@ export async function POST(request: Request) {
       search.categories.map((c) => categoryLabels[c].toLowerCase()).join(", ") +
       (search.reference
         ? " cerca de " + search.reference.name
-        : " en " + searchZones[search.zone].label);
+        : search.center
+          ? " cerca de " +
+            (fromDeparture ? input.origin!.name : "tu punto de búsqueda")
+          : " en " + searchZones[search.zone].label);
     const suggestions = found.places
       .slice(0, 3)
       .map(

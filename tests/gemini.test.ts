@@ -33,15 +33,17 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     globalThis,
     "fetch",
     async (url: RequestInfo | URL, init?: RequestInit) => {
-      if (String(url).includes("computeRouteMatrix"))
-        return Response.json(routeMatrixFixture(init));
-      if (String(url).includes("places.googleapis.com")) {
+      if (String(url).includes("/table/"))
+        return Response.json(routeMatrixFixture(url));
+      if (String(url).includes("interpreter")) {
         mapsCalls++;
         return Response.json({
-          places: rawFixture(3).places.map((p, i) => ({
+          elements: rawFixture(3).elements.map((p, i) => ({
             ...p,
-            displayName: { text: "Opci\u00f3n " + (i + 1) },
-            types: i === 1 ? ["park"] : ["cafe"],
+            tags: {
+              name: "Opción " + (i + 1),
+              ...(i === 1 ? { leisure: "park" } : { amenity: "cafe" }),
+            },
           })),
         });
       }
@@ -125,7 +127,7 @@ test("chat discovers options and plans only accepted visits (simulated HTTP)", a
     });
     assert.deepEqual(itineraryIds(plan.itinerary), chosen);
     assert.equal(modelCalls - before, 1);
-    assert.equal(mapsCalls, 2);
+    assert.equal(mapsCalls, 1);
     assert.equal(plan.profile.budgetCOP, null); // Budget is not required to accept two visits.
     const suggestions = await call({
       messages: [{ role: "user", content: "Busca más cafeterías" }],

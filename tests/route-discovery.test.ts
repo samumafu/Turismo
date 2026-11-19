@@ -7,7 +7,7 @@ import {
 import { interpretSearch, searchSpecSchema } from "../src/lib/places";
 import { isVerifiedPlace } from "../src/lib/server/place-verification";
 import { POST as search } from "../src/app/api/places/search/route";
-import { rawFixture, fixturePlaces } from "./fixtures";
+import { routeMatrixFixture, rawFixture, fixturePlaces } from "./fixtures";
 
 test("custom distances accept meters and decimal kilometers below one kilometer", () => {
   assert.equal(interpretSearch("cafeterías a 250 metros").radius, 250);
@@ -30,38 +30,28 @@ test("discovery uses street distances, bounds paired places, and preserves the c
     globalThis,
     "fetch",
     async (input: RequestInfo | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body));
-      if (String(input).includes("computeRouteMatrix")) {
-        assert.match(String(input), /distanceMatrix\/v2:computeRouteMatrix$/);
-        assert.equal(body.travelMode, "WALK");
-        assert.equal(body.routingPreference, undefined);
-        assert.ok(
-          new Headers(init?.headers)
-            .get("X-Goog-FieldMask")
-            ?.includes("status"),
-        );
-        if (malformed) return Response.json({ invalid: true });
+      if (String(input).includes("/table/")) {
+        if (malformed) return Response.json({});
+        const between = !String(input).includes("/driving/-77.2783,1.2146;");
         return Response.json(
-          body.origins.flatMap(
-            (origin: { waypoint: { placeId?: string } }, originIndex: number) =>
-              body.destinations.map((_: unknown, destinationIndex: number) => ({
-                ...(originIndex ? { originIndex } : {}),
-                ...(destinationIndex ? { destinationIndex } : {}),
-                condition: "ROUTE_EXISTS",
-                status: {},
-                distanceMeters: origin.waypoint.placeId
-                  ? betweenDistance
-                  : streetDistance,
-                duration: "180s",
-              })),
-          ),
+          routeMatrixFixture(input, between ? betweenDistance : streetDistance),
         );
       }
-      const records = rawFixture(2).places.map((place, index) => ({
-        ...place,
-        types: [index ? "park" : "cafe"],
+      const query = String(init?.body);
+      const raw = rawFixture(2);
+      const elements = raw.elements.map((e, i) => ({
+        ...e,
+        lat: e.lat + 0.0002,
+        tags: {
+          name: e.tags.name,
+          ...(i ? { leisure: "park" } : { amenity: "cafe" }),
+        },
       }));
-      return Response.json({ places: records });
+      return Response.json({
+        elements: decodeURIComponent(query).includes("park")
+          ? elements
+          : elements.slice(0, 1),
+      });
     },
   );
   const spec = searchSpecSchema.parse({
@@ -134,7 +124,7 @@ test("discovery uses street distances, bounds paired places, and preserves the c
         malformed = true;
         await assert.rejects(
           measureStreetRoutes(
-            [{ placeId: "SyntheticPlace1" }],
+            [[1, -77]],
             fixturePlaces().slice(0, 1),
             "walking",
           ),

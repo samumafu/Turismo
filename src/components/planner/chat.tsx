@@ -59,7 +59,7 @@ export function ChatPanel() {
             {state.mode === "gemini"
               ? "Conversando con Gemini"
               : state.mode === "demo"
-                ? `Google Maps · planificación sin IA`
+                ? `OpenStreetMap · planificación sin IA`
                 : "Una conversación, tu próximo recorrido"}
           </p>
         </div>
@@ -168,7 +168,11 @@ export function ChatPanel() {
               variant="secondary"
               disabled={state.busy}
               onClick={() =>
-                void actions.send("Una cafetería y un parque cerca en Pasto")
+                void actions.send(
+                  state.origin?.source === "pin"
+                    ? "Busca una cafetería y un parque cerca del pin de salida"
+                    : "Una cafetería y un parque cerca en Pasto",
+                )
               }
             >
               Un café y un parque cerca

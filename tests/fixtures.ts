@@ -1,36 +1,34 @@
-// Synthetic responses only. Never imported by the application.
-import { normalizeGooglePlace } from "../src/lib/server/google-maps";
-export function routeMatrixFixture(init?: RequestInit) {
-  const body = JSON.parse(String(init?.body));
-  return body.origins.flatMap((_: unknown, originIndex: number) =>
-    body.destinations.map((_: unknown, destinationIndex: number) => ({
-      originIndex,
-      destinationIndex,
-      status: {},
-      condition: "ROUTE_EXISTS",
-      distanceMeters: 200 + destinationIndex * 10,
-      duration: "180s",
-    })),
-  );
-}
+// Synthetic HTTP fixtures for tests only. Never imported by the application.
+import { normalizeResult } from "../src/lib/osm";
 export const rawFixture = (size = 4) => ({
-  places: Array.from({ length: size }, (_, i) => ({
-    id: "TestPlace" + (910000001 + i),
-    displayName: { text: `Lugar de prueba ${i + 1}` },
-    location: {
-      latitude: 1.2146 + (i % 30) * 0.0001,
-      longitude: -77.2783 + Math.floor(i / 30) * 0.0001,
+  elements: Array.from({ length: size }, (_, i) => ({
+    type: "node",
+    id: 910000001 + i,
+    lat: 1.2146 + (i % 30) * 0.0001,
+    lon: -77.2783 + Math.floor(i / 30) * 0.0001,
+    tags: {
+      name: `Lugar de prueba ${i + 1}`,
+      tourism: "museum",
+      "addr:city": "Pasto",
     },
-    types: ["museum"],
-    businessStatus: "OPERATIONAL",
-    formattedAddress: "Pasto, Nariño, Colombia",
-    addressComponents: [
-      { shortText: "CO", longText: "Colombia", types: ["country"] },
-      { longText: "Nariño", types: ["administrative_area_level_1"] },
-    ],
   })),
 });
 export const fixturePlaces = () =>
-  rawFixture().places.map((p) =>
-    normalizeGooglePlace(p, new Date().toISOString())!,
-  );
+  normalizeResult(rawFixture(), new Date().toISOString()).places;
+
+export function routeMatrixFixture(url: RequestInfo | URL, distance = 200) {
+  const params = new URL(String(url)).searchParams;
+  const row = params
+    .get("destinations")!
+    .split(";")
+    .map(() => distance);
+  const distances = params
+    .get("sources")!
+    .split(";")
+    .map(() => row);
+  return {
+    code: "Ok",
+    distances,
+    durations: distances.map((r) => r.map(() => 180)),
+  };
+}

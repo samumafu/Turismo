@@ -1,26 +1,24 @@
 import { placeSchema } from "@/lib/places";
-import { googlePlacePhoto } from "@/lib/server/google-maps";
 import { isVerifiedPlace } from "@/lib/server/place-verification";
+import { placePhoto } from "@/lib/server/place-photo";
 import {
-  errorResponse,
   guardRequest,
-  HttpError,
   readJson,
+  errorResponse,
+  HttpError,
 } from "@/lib/server/guard";
 export const maxDuration = 25;
 export async function POST(request: Request) {
   try {
     guardRequest(request, "photo");
-    const parsed = placeSchema.safeParse(await readJson(request, 40000));
-    if (!parsed.success)
-      throw new HttpError(400, "Los datos del lugar no son válidos.");
-    if (!isVerifiedPlace(parsed.data))
+    const place = placeSchema.parse(await readJson(request, 6000));
+    if (!isVerifiedPlace(place))
       throw new HttpError(
         409,
         "Vuelve a buscar el lugar para consultar su foto.",
       );
     return Response.json(
-      { photo: await googlePlacePhoto(parsed.data) },
+      { photo: await placePhoto(place) },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

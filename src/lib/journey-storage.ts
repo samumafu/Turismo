@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  googleIdSchema,
+  osmIdSchema,
   placeSchema,
   searchSpecSchema,
   type Place,
@@ -22,8 +22,7 @@ export const journeySnapshotSchema = z.object({
   profile: profileSchema,
   itinerary: itinerarySchema.nullable(),
   mode: z.enum(["gemini", "demo"]).nullable().default(null),
-  acceptedIds: z.array(googleIdSchema).max(25).default([]),
-  googlePlaceIds: z.array(googleIdSchema).max(25).default([]),
+  acceptedIds: z.array(osmIdSchema).max(25).default([]),
 });
 export type JourneySnapshot = z.infer<typeof journeySnapshotSchema>;
 
@@ -61,12 +60,10 @@ export function readStoredJourney(
   if (!profile.success || !search.success) return null;
   const previousIds = data.acceptedIds ?? data.googlePlaceIds ?? [];
   const acceptedIds = [
-    ...new Set(
-      previousIds.filter((id) => googleIdSchema.safeParse(id).success),
-    ),
+    ...new Set(previousIds.filter((id) => osmIdSchema.safeParse(id).success)),
   ];
   const legacyVisits = previousIds.some(
-    (id) => !googleIdSchema.safeParse(id).success,
+    (id) => !osmIdSchema.safeParse(id).success,
   );
   const itinerary = itinerarySchema.safeParse(data.itinerary);
   return {
@@ -92,7 +89,6 @@ export function readStoredJourney(
           : null,
       mode: data.mode ?? null,
       acceptedIds,
-      googlePlaceIds: acceptedIds,
     }),
   };
 }
@@ -103,12 +99,12 @@ type Snapshot = {
   itinerary: Itinerary | null;
   acceptedIds: string[];
 };
-// Persist the traveler's choices, never a copy of Google's place catalog.
+// Persist the traveler's choices, refresh the selected OSM records when reopening.
 export function storedJourney<T extends Snapshot>(snapshot: T) {
   return {
     ...snapshot,
     version: 2 as const,
-    googlePlaceIds: [...new Set(snapshot.acceptedIds)],
+    acceptedIds: [...new Set(snapshot.acceptedIds)],
     results: [],
     places: [],
     search: snapshot.search.reference

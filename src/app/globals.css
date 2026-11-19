@@ -469,9 +469,10 @@
   display: block;
   color: var(--muted-foreground);
 }
-.google-place-marker {
+.place-marker-number {
   display: grid;
   place-items: center;
+  box-sizing: border-box;
   width: 34px;
   height: 34px;
   border: 3px solid white;
@@ -480,10 +481,12 @@
   color: white;
   font-family: var(--font-body), sans-serif;
   font-size: 13px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   box-shadow: 0 2px 7px #18332933;
 }
-.google-place-marker-selected {
+.place-marker-selected {
   background: #183d32;
   outline: 3px solid #91b8a4;
 }
@@ -730,12 +733,33 @@
   overflow: hidden;
 }
 .place-photo-zoom {
+  position: relative;
+  cursor: zoom-in;
   display: block;
   width: 100%;
   height: 100%;
   background: transparent;
   border: 0;
   padding: 0;
+}
+.place-photo-expand {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  color: white;
+  background: #142820cc;
+  border-radius: 50%;
+}
+.place-photo-block .place-photo-frame[data-empty="true"] {
+  height: auto;
+}
+.place-photo-frame[data-empty="true"] .place-photo-placeholder {
+  flex-direction: row;
+  min-height: 42px;
+  flex-wrap: wrap;
 }
 .place-photo-zoom:focus-visible {
   outline-offset: -4px;
@@ -1322,10 +1346,6 @@
   .account-dialog input {
     font-size: 16px;
     max-width: 100%;
-  }
-  .google-place-marker {
-    width: 40px;
-    height: 40px;
   }
   .footer-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -8,7 +8,6 @@ function signature(place: Place) {
   const key =
     process.env.PLACE_SIGNING_SECRET?.trim() ||
     process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_MAPS_SERVER_API_KEY?.trim() ||
     ephemeral;
   const { verification, ...data } = placeSchema.parse(place);
   void verification;

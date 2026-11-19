@@ -1,6 +1,6 @@
 # Turismo Nariño · Turismo Inteligente Pasto
 
-Planificador turístico en Next.js, TypeScript, Tailwind y shadcn/ui. **Google Maps es el único proveedor de mapas, lugares, fotografías y rutas.** No hay un catálogo manual de destinos ni resultados de relleno.
+Planificador turístico en Next.js, TypeScript, Tailwind y shadcn/ui. OpenStreetMap aporta la cartografía y los lugares, OSRM calcula las rutas y Wikimedia Commons aporta las fotos disponibles. No hay un catálogo manual de destinos ni resultados de relleno.
 
 ## Ejecutar
 
@@ -11,21 +11,21 @@ npm install
 npm run dev
 ```
 
-Copia `.env.example` a `.env.local` y configura `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` y `GOOGLE_MAPS_SERVER_API_KEY`. Habilita Maps JavaScript API, Places API (New) y Routes API. Sigue [la guía de consola y cuotas](docs/google-maps.md). No se necesita un selector de proveedor.
+El mapa, los lugares y las rutas funcionan sin claves ni facturación. Para las funciones opcionales, configura Gemini y Supabase en `.env.local`.
 
 ## Descubrimiento y planificación
 
-El chat y la búsqueda avanzada consultan Google Places por zona, nombre, referencia y categorías. Se comprueban país, departamento y radio. Cada página contiene hasta 20 resultados y **Ver más lugares** carga otra página disponible, hasta 60 por búsqueda. Las fotos se abren a petición con sus autores y atribución de Google Maps.
+El chat y la búsqueda avanzada consultan OpenStreetMap (Overpass o Photon) por zona, nombre, referencia y categorías. Se comprueban país, departamento y radio. Cada página contiene hasta 20 resultados y **Ver más lugares** permite recorrer los candidatos disponibles dentro del radio. Las fotos se pueden ampliar y muestran sus autores y licencia de Wikimedia Commons.
 
-Añade solo los destinos que quieras visitar; buscar opciones no los incorpora al itinerario. Google Routes devuelve la geometría, distancia y duración de las rutas en carro o a pie desde GPS o un origen confirmado. El transporte público abre Google Maps.
+Añade solo los destinos que quieras visitar; buscar opciones no los incorpora al itinerario. OSRM devuelve la geometría, distancia y duración de las rutas en carro o a pie desde GPS o un origen confirmado. El transporte público abre Google Maps.
 
 Los horarios de agenda son orientativos. Tarifas, apertura y disponibilidad se confirman en la ficha del lugar. La app no inventa esos datos ni calcula rutas con líneas rectas.
 
-Los viajes guardados conservan IDs, elecciones y agenda; los datos de los lugares se vuelven a consultar al abrirlos. No se guardan fotos, fichas ni rutas de Google como catálogo del servidor.
+Los viajes guardados conservan IDs, elecciones y agenda; los datos de los lugares se vuelven a consultar al abrirlos. No se guardan fotos, fichas ni rutas como catálogo del servidor.
 
 ## Gemini opcional
 
-Configura `GEMINI_API_KEY` y `GEMINI_MODEL` para interpretar la conversación. Es preferible conservar Gemini en un proyecto separado si utilizas su nivel gratuito sin facturación. Sin clave o ante un fallo, la planificación por reglas sigue disponible usando los mismos lugares de Google Maps.
+Configura `GEMINI_API_KEY` y `GEMINI_MODEL` para interpretar la conversación. Es preferible conservar Gemini en un proyecto separado si utilizas su nivel gratuito sin facturación. Sin clave o ante un fallo, la planificación por reglas sigue disponible usando los mismos lugares de OpenStreetMap.
 
 ```powershell
 npm run check:gemini
@@ -33,7 +33,7 @@ npm run check:gemini
 
 ## Cuentas y viaje guardado
 
-Una vez configurado Maps, la aplicación puede usarse como invitado. Para activar cuentas y guardar un viaje por usuario:
+La aplicación puede usarse como invitado. Para activar cuentas y guardar un viaje por usuario:
 
 1. Crea un proyecto **Free** en [Supabase](https://supabase.com/pricing) y ejecuta el archivo `supabase/schema.sql` en su SQL Editor. Sus políticas RLS restringen cada registro al dueño.
 2. Copia la URL del proyecto y su clave **publishable** (o anon) a `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`; reinicia Next.js. Configura las mismas variables en Vercel y vuelve a desplegar. Son valores públicos: nunca uses la clave `service_role` en el navegador.
@@ -61,18 +61,8 @@ Comprobación explícita con una búsqueda real, sin fotos ni rutas:
 npm run check:maps
 ```
 
-Con el servidor activo, `npm run test:api` realiza una búsqueda y genera un itinerario con un destino aceptado. Estas comprobaciones reales consumen solicitudes de Google.
+Con el servidor activo, `npm run test:api` realiza una búsqueda y genera un itinerario con un destino aceptado. Estas comprobaciones reales consumen solicitudes a los servicios públicos.
 
 ## Vercel
 
-Configura las claves de Maps y las variables opcionales de Gemini/Supabase en Settings → Environment Variables y despliega de nuevo. Autoriza el dominio exacto en la clave del navegador. La clave del servidor se limita a Places API (New) y Routes API y nunca se expone al cliente.
-
-## Archivos importantes
-
-- `src/lib/server/google-maps.ts`: búsqueda paginada, referencias, fichas y fotografías.
-- `src/lib/server/google-routes.ts`: rutas reales y decodificación de geometría.
-- `src/lib/server/discovery.ts`: validación y firma de los lugares recibidos.
-- `src/components/discovery/`: mapa, búsqueda y fotos.
-- `src/components/planner/`: chat, elecciones, itinerario y cuentas.
-- `docs/google-maps.md`: claves, uso y cuotas.
-- `docs/BREVO_SUPABASE.md`: configuración de correo de las cuentas.
+Configura las variables opcionales de Gemini y Supabase en el entorno del despliegue.

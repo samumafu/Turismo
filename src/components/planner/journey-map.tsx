@@ -8,6 +8,10 @@ import {
   MapPin,
   LoaderCircle,
   Route,
+  Navigation,
+  Pause,
+  Play,
+  Check,
   X,
 } from "lucide-react";
 import {
@@ -19,6 +23,8 @@ import {
 } from "@/lib/places";
 import PlaceMap from "@/components/discovery/place-map";
 import { usePlanner } from "./provider";
+import { useJourneyNavigation } from "./use-journey-navigation";
+import { arrivalRadiusMeters } from "@/lib/journey-navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -44,15 +50,31 @@ function RoutingMap({
   places,
   planned,
   stops,
+  dayStops,
 }: {
   places: Place[];
   planned: boolean;
   stops: Place[];
+  dayStops: Place[];
 }) {
   const { state, location, actions } = usePlanner();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pickingOrigin, setPickingOrigin] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  const basePosition = useMemo(
+    () =>
+      state.origin?.confirmed
+        ? { coordinates: state.origin.coordinates, accuracy: 0 }
+        : location.position,
+    [state.origin, location.position],
+  );
+  const navigation = useJourneyNavigation({
+    stops: dayStops,
+    location,
+    origin: basePosition?.coordinates ?? null,
+    resetKey: `${state.mapRevision}:${state.routeRequest}:${state.routeDay}:${dayStops.map((stop) => stop.id).join(",")}`,
+  });
+  const { stop: stopNavigation } = navigation;
   const { setPinnedOrigin } = actions;
   const { clear: clearLocation } = location;
   const pickOrigin = useCallback(
@@ -62,11 +84,12 @@ function RoutingMap({
         return;
       }
       clearLocation();
+      stopNavigation();
       setPinnedOrigin(coordinates);
       setPickingOrigin(false);
       setPinError(null);
     },
-    [setPinnedOrigin, clearLocation],
+    [setPinnedOrigin, clearLocation, stopNavigation],
   );
   const [mode, setMode] = useState<Mode>(
     state.profile.transport === "carro"
@@ -102,30 +125,59 @@ function RoutingMap({
   } | null>(null);
   const destination = stops.find((p) => p.id === selectedId);
   const targets = useMemo(
-    () => (destination ? [destination] : stops),
-    [stops, destination],
+    () =>
+      navigation.progress.status === "completed"
+        ? []
+        : navigation.engaged
+          ? navigation.currentStop
+            ? [navigation.currentStop]
+            : []
+          : destination
+            ? [destination]
+            : stops,
+    [
+      stops,
+      destination,
+      navigation.progress.status,
+      navigation.engaged,
+      navigation.currentStop,
+    ],
   );
   const position = useMemo(
     () =>
-      state.origin?.confirmed
-        ? { coordinates: state.origin.coordinates, accuracy: 0 }
-        : location.position,
-    [state.origin, location.position],
+      navigation.progress.status !== "idle"
+        ? (location.position ??
+          (navigation.progress.origin
+            ? { coordinates: navigation.progress.origin, accuracy: 0 }
+            : basePosition))
+        : basePosition,
+    [
+      navigation.progress.status,
+      navigation.progress.origin,
+      location.position,
+      basePosition,
+    ],
   );
-  const originLabel = state.origin?.confirmed
-    ? state.origin.name
-    : "Tu ubicación GPS";
+  const originLabel =
+    navigation.progress.status !== "idle"
+      ? "Salida del recorrido"
+      : state.origin?.confirmed
+        ? state.origin.name
+        : "Tu ubicación GPS";
   const blocked = targets.some(
     (p) =>
       p.availability === "restringido" || (mode === "driving" && !p.roadAccess),
   );
   const query =
-    (position || targets.length >= 2) &&
+    ((navigation.engaged ? navigation.progress.origin : position) ||
+      targets.length >= 2) &&
     targets.length &&
     mode !== "transit" &&
     !blocked
       ? JSON.stringify({
-          origin: position?.coordinates,
+          origin: navigation.engaged
+            ? (navigation.progress.origin ?? undefined)
+            : position?.coordinates,
           placeIds: targets.map((p) => p.id),
           knownPlaces: targets,
           mode,
@@ -152,7 +204,7 @@ function RoutingMap({
         if (!result.ok)
           throw new Error(
             body.error ||
-              "No se pudo calcular la ruta. Prueba el enlace de Google Maps.",
+              "No se pudo calcular la ruta. Prueba el enlace externo.",
           );
         const data = routeSchema.parse(body);
         if (!controller.signal.aborted) setResponse({ query, data });
@@ -163,7 +215,7 @@ function RoutingMap({
             error:
               e instanceof Error && e.name !== "TimeoutError"
                 ? e.message
-                : "El servicio de rutas tardó demasiado. Prueba Google Maps o reintenta.",
+                : "El servicio de rutas tardó demasiado. Prueba el enlace externo o reintenta.",
           });
       }
     }, 1100);
@@ -180,51 +232,143 @@ function RoutingMap({
     ]);
   return (
     <>
-      <div className="map-location-actions">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setPickingOrigin(false);
-            // Keep the chosen departure if GPS fails; prefer GPS once it succeeds.
-            location.request(actions.clearOrigin);
-          }}
-          disabled={location.busy}
-        >
-          {location.busy ? (
-            <LoaderCircle data-icon="inline-start" aria-hidden="true" />
-          ) : (
-            <LocateFixed data-icon="inline-start" aria-hidden="true" />
-          )}
-          {location.busy
-            ? "Obteniendo ubicación…"
-            : location.position
-              ? "Usar mi GPS"
-              : "Usar mi ubicación"}
-        </Button>
-        <Button
-          variant={pickingOrigin ? "secondary" : "outline"}
-          aria-pressed={pickingOrigin}
-          onClick={() => {
-            setPickingOrigin((value) => !value);
-            setPinError(null);
-          }}
-        >
-          <MapPin data-icon="inline-start" aria-hidden="true" />
-          {pickingOrigin ? "Cancelar pin" : "Poner pin de salida"}
-        </Button>
-        {location.position ? (
+      {!navigation.engaged ? (
+        <div className="map-location-actions">
           <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Dejar de usar ubicación"
-            title="Dejar de usar ubicación"
-            onClick={location.clear}
+            variant="outline"
+            onClick={() => {
+              setPickingOrigin(false);
+              stopNavigation();
+              // Keep the chosen departure if GPS fails; prefer GPS once it succeeds.
+              location.request(actions.clearOrigin);
+            }}
+            disabled={location.busy || navigation.engaged}
           >
-            <X aria-hidden="true" />
+            {location.busy ? (
+              <LoaderCircle data-icon="inline-start" aria-hidden="true" />
+            ) : (
+              <LocateFixed data-icon="inline-start" aria-hidden="true" />
+            )}
+            {location.busy
+              ? "Obteniendo ubicación…"
+              : location.position
+                ? "Usar mi GPS"
+                : "Usar mi ubicación"}
           </Button>
-        ) : null}
-      </div>
-      {state.origin ? (
+          <Button
+            variant={pickingOrigin ? "secondary" : "outline"}
+            aria-pressed={pickingOrigin}
+            onClick={() => {
+              stopNavigation();
+              setPickingOrigin((value) => !value);
+              setPinError(null);
+            }}
+            disabled={navigation.engaged}
+          >
+            <MapPin data-icon="inline-start" aria-hidden="true" />
+            {pickingOrigin ? "Cancelar pin" : "Poner pin de salida"}
+          </Button>
+          {location.position && !navigation.engaged ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Dejar de usar ubicación"
+              title="Dejar de usar ubicación"
+              onClick={location.clear}
+            >
+              <X aria-hidden="true" />
+            </Button>
+          ) : null}
+          {stops.length &&
+          dayStops.length &&
+          navigation.progress.status === "idle" ? (
+            <Button
+              className="col-span-full"
+              onClick={navigation.start}
+              disabled={state.busy || mode === "transit"}
+            >
+              <Navigation data-icon="inline-start" aria-hidden="true" />
+              Iniciar recorrido ({dayStops.length}{" "}
+              {dayStops.length === 1 ? "parada" : "paradas"})
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {navigation.engaged ? (
+        <Alert className="mb-4" role="status">
+          <AlertDescription>
+            <p>
+              <strong>
+                Parada {navigation.progress.index + 1} de{" "}
+                {navigation.progress.stops.length}:{" "}
+                {navigation.currentStop?.name}
+              </strong>
+            </p>
+            {navigation.progress.index > 0 ? (
+              <p>
+                Llegaste a {dayStops[navigation.progress.index - 1]?.name}. La
+                ruta continúa a la siguiente parada.
+              </p>
+            ) : null}
+            <p>
+              {navigation.progress.status === "paused"
+                ? "GPS en pausa. Puedes reanudarlo o confirmar tu llegada."
+                : location.busy
+                  ? "Obteniendo GPS para seguir el recorrido…"
+                  : `Al estar a unos ${arrivalRadiusMeters} m, el GPS confirmará la llegada y pasará a la siguiente parada. Mantén esta página abierta.`}
+            </p>
+            {navigation.inaccurate ? (
+              <p>
+                La señal de GPS es imprecisa. No se avanzará automáticamente
+                hasta mejorar la precisión.
+              </p>
+            ) : null}
+            {location.error ? <p>{location.error}</p> : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={navigation.arrived}>
+                <Check data-icon="inline-start" aria-hidden="true" />
+                Ya llegué
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={
+                  navigation.progress.status === "paused"
+                    ? navigation.resume
+                    : navigation.pause
+                }
+              >
+                {navigation.progress.status === "paused" ? (
+                  <Play data-icon="inline-start" aria-hidden="true" />
+                ) : (
+                  <Pause data-icon="inline-start" aria-hidden="true" />
+                )}
+                {navigation.progress.status === "paused"
+                  ? "Reanudar GPS"
+                  : "Pausar GPS"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={stopNavigation}>
+                Salir del recorrido
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : navigation.progress.status === "completed" ? (
+        <Alert className="mb-4" role="status">
+          <AlertDescription>
+            <p>
+              <strong>Recorrido completado</strong>
+            </p>
+            <p>
+              Llegaste a la última parada. El seguimiento de GPS se ha detenido.
+            </p>
+            <Button size="sm" variant="outline" onClick={stopNavigation}>
+              Cerrar recorrido
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {state.origin && navigation.progress.status === "idle" ? (
         <Alert className="mb-3.5" role="status">
           <AlertDescription className="flex items-center gap-3">
             <span className="min-w-0">
@@ -262,7 +406,7 @@ function RoutingMap({
           <AlertDescription>{pinError}</AlertDescription>
         </Alert>
       ) : null}
-      {location.error ? (
+      {location.error && navigation.progress.status === "idle" ? (
         <Alert variant={state.origin?.confirmed ? "default" : "destructive"}>
           <AlertDescription>
             {location.error}
@@ -273,10 +417,10 @@ function RoutingMap({
         </Alert>
       ) : null}
       <PlaceMap
-        places={places}
+        places={navigation.progress.status !== "idle" ? dayStops : places}
         center={center}
         radius={state.search.radius}
-        onSelect={actions.togglePlace}
+        onSelect={navigation.engaged ? undefined : actions.togglePlace}
         selectedIds={state.selectedIds}
         selectionLabel="Añadir a mi itinerario"
         position={position}
@@ -285,38 +429,43 @@ function RoutingMap({
         onPickOrigin={pickingOrigin ? pickOrigin : undefined}
         routeCoordinates={current?.data?.geometry.coordinates}
       />
-      {stops.length ? (
+      {stops.length && navigation.progress.status !== "completed" ? (
         <FieldGroup className="map-route-fields">
-          <Field>
-            <FieldLabel htmlFor="route-destination">
-              Destino de la ruta
-            </FieldLabel>
-            <select
-              id="route-destination"
-              name="route-destination"
-              value={
-                destination?.id ?? (planned ? "day" : (targets[0]?.id ?? ""))
-              }
-              onChange={(e) =>
-                setSelectedId(e.target.value === "day" ? null : e.target.value)
-              }
-            >
-              {planned ? (
-                <option value="day">Recorrido del día, en orden</option>
-              ) : null}
-              {stops.map((p, i) => (
-                <option key={p.id} value={p.id}>
-                  {i + 1}. {p.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {!navigation.engaged ? (
+            <Field>
+              <FieldLabel htmlFor="route-destination">
+                Destino de la ruta
+              </FieldLabel>
+              <select
+                id="route-destination"
+                name="route-destination"
+                value={
+                  destination?.id ?? (planned ? "day" : (targets[0]?.id ?? ""))
+                }
+                onChange={(e) =>
+                  setSelectedId(
+                    e.target.value === "day" ? null : e.target.value,
+                  )
+                }
+              >
+                {planned ? (
+                  <option value="day">Recorrido del día, en orden</option>
+                ) : null}
+                {stops.map((p, i) => (
+                  <option key={p.id} value={p.id}>
+                    {i + 1}. {p.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
           <Field>
             <FieldLabel htmlFor="route-mode">Cómo llegar</FieldLabel>
             <select
               id="route-mode"
               name="route-mode"
               value={mode}
+              disabled={navigation.engaged}
               onChange={(e) => setMode(e.target.value as Mode)}
             >
               <option value="driving">En carro</option>
@@ -384,7 +533,7 @@ function RoutingMap({
         </details>
       ) : null}
       <p className="map-attribution" translate="no">
-        Google Maps
+        OpenStreetMap · OSRM
       </p>
     </>
   );
@@ -404,6 +553,12 @@ export default function JourneyMap() {
       .map((id) => byId.get(id))
       .filter((p): p is Place => !!p);
   }, [state.routeIds, state.places]);
+  const dayStops = useMemo(() => {
+    const byId = new Map(state.places.map((place) => [place.id, place]));
+    return (itinerary?.days[selectedDay]?.stops ?? [])
+      .map((stop) => byId.get(stop.placeId))
+      .filter((place): place is Place => !!place);
+  }, [itinerary, selectedDay, state.places]);
   const places = useMemo(() => {
     if (state.routeRequest && stops.length) return stops;
     if (
@@ -446,6 +601,7 @@ export default function JourneyMap() {
         places={places}
         planned={stops.length > 1 || !!state.routeRequest}
         stops={stops}
+        dayStops={dayStops}
       />
     </div>
   );

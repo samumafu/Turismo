@@ -117,21 +117,28 @@ test("phantom destinations and excessive walking distances fail itinerary valida
     false,
   );
 });
-test("COP values and external Google Maps links preserve exact place identities", () => {
+test("COP values and external Google Maps links use exact coordinates", () => {
   assert.equal(
     extractDemoProfile("Presupuesto de 1,5 millones por persona", emptyProfile)
       .budgetCOP,
     1500000,
   );
   const place = fixturePlaces()[0];
-  assert.equal(
-    new URL(mapsLink(place)).searchParams.get("query_place_id"),
-    place.id.slice(7),
-  );
-  assert.equal(
-    new URL(directionsLink(fixturePlaces())).searchParams.get("api"),
-    "1",
-  );
+  const placeLink = new URL(mapsLink(place));
+  assert.equal(placeLink.origin, "https://www.google.com");
+  assert.equal(placeLink.pathname, "/maps/search/");
+  assert.equal(placeLink.searchParams.get("api"), "1");
+  assert.equal(placeLink.searchParams.get("query"), place.coordinates.join(","));
+  const routeLink = new URL(directionsLink(fixturePlaces()));
+  assert.equal(routeLink.origin, "https://www.google.com");
+  assert.equal(routeLink.pathname, "/maps/dir/");
+  assert.equal(routeLink.searchParams.get("api"), "1");
+  assert.equal(routeLink.searchParams.get("travelmode"), "driving");
+  const walkingLink = new URL(directionsLink([place], "walking"));
+  assert.equal(walkingLink.searchParams.get("travelmode"), "walking");
+  assert.equal(walkingLink.searchParams.get("destination"), place.coordinates.join(","));
+  const transitLink = new URL(directionsLink([place], "transit"));
+  assert.equal(transitLink.searchParams.get("travelmode"), "transit");
 });
 test("cross-site requests, oversized bodies and excess frequency are rejected", async () => {
   assert.throws(() =>

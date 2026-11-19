@@ -110,7 +110,7 @@ export function SiteFooter() {
       </div>
       <div className="shell footer-bottom">
         <span>© 2026 Turismo Nariño</span>
-        <span>Lugares y rutas con Google Maps</span>
+        <span>Lugares y rutas con OpenStreetMap</span>
         <Link href="/fuentes">Fuentes y condiciones de uso</Link>
       </div>
     </footer>

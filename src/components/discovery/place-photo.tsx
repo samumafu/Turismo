@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { ImageOff, LoaderCircle, RefreshCw } from "lucide-react";
+import { Expand, ImageOff, LoaderCircle, RefreshCw } from "lucide-react";
 import type { Place } from "@/lib/places";
 import { loadPlacePhoto, type PlacePhotoData } from "@/lib/place-photos";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ export function PlacePhoto({
   const [attempt, setAttempt] = useState(0);
   const [expanded, setExpanded] = useState(false);
   useEffect(() => {
-    if (!place.googlePhoto) return;
     let active = true;
     let started = false;
     const load = () => {
@@ -60,26 +59,19 @@ export function PlacePhoto({
   }, [place, eager, attempt]);
   const caption = photo ? (
     <>
-      <span translate="no">Google Maps</span>
-      {photo.authors.map((author, index) => (
-        <span key={index}>
-          {" "}
-          ·{" "}
-          {author.uri ? (
-            <a href={author.uri} target="_blank" rel="noopener noreferrer">
-              {author.displayName}
-            </a>
-          ) : (
-            author.displayName
-          )}
-        </span>
-      ))}
+      <a href={photo.page} target="_blank" rel="noopener noreferrer">
+        Wikimedia Commons · {photo.author}
+      </a>{" "}
+      · <a href={photo.licenseUrl}>{photo.license}</a>
     </>
   ) : null;
   return (
     <div className="place-photo-block" ref={element}>
       <figure>
-        <div className="place-photo-frame">
+        <div
+          className="place-photo-frame"
+          data-empty={!photo && (status === "ready" || status === "error")}
+        >
           {photo ? (
             <button
               type="button"
@@ -99,10 +91,11 @@ export function PlacePhoto({
                   setStatus("error");
                 }}
               />
+              <Expand className="place-photo-expand" aria-hidden="true" />
             </button>
           ) : (
             <div className="place-photo-placeholder">
-              {place.googlePhoto && status !== "error" && status !== "ready" ? (
+              {status !== "error" && status !== "ready" ? (
                 <>
                   <LoaderCircle className="animate-spin" aria-hidden="true" />
                   <span>Cargando imagen</span>
@@ -130,7 +123,7 @@ export function PlacePhoto({
             </div>
           )}
         </div>
-        <figcaption>{caption}</figcaption>
+        {caption && <figcaption>{caption}</figcaption>}
       </figure>
       <Dialog open={expanded} onOpenChange={setExpanded}>
         <DialogContent className="photo-dialog">

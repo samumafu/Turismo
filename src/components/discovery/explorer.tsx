@@ -6,6 +6,7 @@ import {
   categoryLabels,
   searchZones,
   zoneKeys,
+  normalize,
   type SearchSpec,
 } from "@/lib/places";
 import { usePlanner } from "@/components/planner/provider";
@@ -23,6 +24,9 @@ export function DiscoveryExplorer({ onComplete }: { onComplete: () => void }) {
   const [spec, setSpec] = useState<SearchSpec>(state.search);
   const [text, setText] = useState("");
   const [distance, setDistance] = useState(String(state.search.radius));
+  const [area, setArea] = useState(
+    state.search.near ?? searchZones[state.search.zone].label,
+  );
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (await actions.searchPlaces({ ...spec, radius: Number(distance) }, text))
@@ -33,8 +37,8 @@ export function DiscoveryExplorer({ onComplete }: { onComplete: () => void }) {
       <div className="discovery-intro">
         <h2 id="discovery-title">Busca a tu medida</h2>
         <p>
-          Ajusta la zona y la distancia. Verás los resultados en el mapa
-          principal.
+          Busca en cualquier municipio de Nariño y ajusta la distancia. Verás
+          los resultados en el mapa principal.
         </p>
       </div>
       <form className="discovery-form" onSubmit={submit}>
@@ -56,27 +60,51 @@ export function DiscoveryExplorer({ onComplete }: { onComplete: () => void }) {
           </Field>
           <FieldGroup className="discovery-filters">
             <Field>
-              <FieldLabel htmlFor="search-zone">Zona</FieldLabel>
-              <select
+              <FieldLabel htmlFor="search-zone">
+                Municipio o referencia en Nariño
+              </FieldLabel>
+              <Input
                 id="search-zone"
-                value={spec.zone}
+                name="area"
+                list="search-zone-suggestions"
+                autoComplete="off"
+                aria-describedby="search-zone-help"
+                required
+                maxLength={160}
+                value={area}
                 disabled={state.busy}
-                onChange={(event) =>
+                placeholder="Municipio, corregimiento o referencia"
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setArea(value);
+                  const zone = zoneKeys.find((key) =>
+                    searchZones[key].label
+                      .split(" / ")
+                      .some(
+                        (label) => normalize(label) === normalize(value.trim()),
+                      ),
+                  );
                   setSpec({
                     ...spec,
-                    zone: event.target.value as SearchSpec["zone"],
+                    zone: zone ?? spec.zone,
                     center: undefined,
-                    near: undefined,
+                    near: zone ? undefined : value.trim(),
                     reference: undefined,
-                  })
-                }
-              >
+                    name: "",
+                  });
+                }}
+              />
+              <datalist id="search-zone-suggestions">
                 {zoneKeys.map((key) => (
-                  <option value={key} key={key}>
-                    {searchZones[key].label}
-                  </option>
+                  <option
+                    value={searchZones[key].label.split(" / ")[0]}
+                    key={key}
+                  />
                 ))}
-              </select>
+              </datalist>
+              <FieldDescription id="search-zone-help">
+                Puedes escribir un lugar aunque no aparezca en las sugerencias.
+              </FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="search-category">Categoría</FieldLabel>
@@ -146,6 +174,7 @@ export function DiscoveryExplorer({ onComplete }: { onComplete: () => void }) {
             <p>
               Distancias desde{" "}
               {spec.reference?.name ??
+                spec.near ??
                 (spec.center
                   ? "tu punto de búsqueda"
                   : `el centro de ${searchZones[spec.zone].label}`)}

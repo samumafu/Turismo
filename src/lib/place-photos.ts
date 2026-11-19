@@ -1,21 +1,21 @@
 import { z } from "zod";
-import { googleAuthorSchema, type Place } from "./places";
+import { type Place } from "./places";
 
 const photoSchema = z.object({
-  provider: z.literal("google"),
   url: z
     .string()
     .url()
-    .refine((value) => {
-      const url = new URL(value);
-      return (
-        url.protocol === "https:" &&
-        (url.hostname === "googleusercontent.com" ||
-          url.hostname.endsWith(".googleusercontent.com"))
-      );
-    }),
-  page: z.string().url().startsWith("https://www.google.com/maps/"),
-  authors: z.array(googleAuthorSchema),
+    .refine(
+      (url) =>
+        new URL(url).protocol === "https:" &&
+        ["upload.wikimedia.org", "thumb.wikimedia.org"].includes(
+          new URL(url).hostname,
+        ),
+    ),
+  page: z.string().url().startsWith("https://commons.wikimedia.org/"),
+  author: z.string(),
+  license: z.string(),
+  licenseUrl: z.string().url(),
 });
 export type PlacePhotoData = z.infer<typeof photoSchema>;
 // Deduplicate only photos already on screen during this page visit.
@@ -45,8 +45,13 @@ async function requestPhoto(place: Place) {
   }
 }
 export function loadPlacePhoto(place: Place) {
-  if (!place.googlePhoto) return Promise.resolve(null);
-  const key = `${place.id}:${place.googlePhoto.name}`;
+  if (
+    !place.commons &&
+    !place.wikidata &&
+    place.name.endsWith("sin nombre en OSM")
+  )
+    return Promise.resolve(null);
+  const key = `${place.id}:${place.observedAt}`;
   const known = visiblePhotos.get(key);
   if (known && known.expires > Date.now()) return known.promise;
   if (visiblePhotos.size >= 60)

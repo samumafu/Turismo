@@ -1,87 +1,66 @@
+import { waitForRoutingSlot } from "@/lib/server/osrm";
 import "server-only";
 import { z } from "zod";
 import { searchZones, type Place, type SearchSpec } from "@/lib/places";
 import { discoverPlaces } from "./discovery";
-import { googleRequest } from "./google-maps";
+
 import { signPlace } from "./place-verification";
-import { HttpError, rateLimit } from "./guard";
+import { HttpError } from "./guard";
 
-const elementSchema = z.object({
-  originIndex: z.number().int().min(0).default(0),
-  destinationIndex: z.number().int().min(0).default(0),
-  status: z.object({ code: z.number().default(0) }).optional(),
-  condition: z.string(),
-  distanceMeters: z.number().nonnegative().optional(),
-  duration: z
-    .string()
-    .regex(/^\d+(?:\.\d+)?s$/)
-    .optional(),
-});
-type Origin =
-  | { placeId: string }
-  | { location: { latLng: { latitude: number; longitude: number } } };
+type Coord = [number, number];
 type Measurement = { distanceMeters: number; durationSeconds: number };
-
 export async function measureStreetRoutes(
-  origins: Origin[],
+  origins: Coord[],
   destinations: Place[],
   mode: SearchSpec["travelMode"],
 ) {
-  if (!origins.length || !destinations.length)
-    return new Map<string, Measurement>();
-  // Bounded matrices, no traffic SKU, polling or persistent provider cache.
-  if (
-    origins.length * destinations.length > 48 ||
-    origins.length + destinations.length > 50
-  )
-    throw new HttpError(400, "Demasiados lugares para comparar distancias.");
-  rateLimit("google:matrix", 16, 60000);
-  const response = z
-    .array(elementSchema)
-    .max(48)
-    .safeParse(
-      await googleRequest(
-        "routes/computeRouteMatrix",
-        "originIndex,destinationIndex,status,condition,distanceMeters,duration",
-        {
-          origins: origins.map((waypoint) => ({ waypoint })),
-          destinations: destinations.map((place) => ({
-            waypoint: { placeId: place.id.slice(7) },
-          })),
-          travelMode: mode === "walking" ? "WALK" : "DRIVE",
-          ...(mode === "driving"
-            ? { routingPreference: "TRAFFIC_UNAWARE" }
-            : {}),
-        },
-      ),
-    );
-  if (!response.success)
+  const result = new Map<string, Measurement>();
+  if (!origins.length || !destinations.length) return result;
+  const coords = [...origins, ...destinations.map((p) => p.coordinates)]
+    .map(([lat, lon]) => lon + "," + lat)
+    .join(";");
+  const params = new URLSearchParams({
+    sources: origins.map((_, i) => i).join(";"),
+    destinations: destinations.map((_, i) => i + origins.length).join(";"),
+    annotations: "distance,duration",
+  });
+  const url = `https://routing.openstreetmap.de/routed-${mode === "walking" ? "foot" : "car"}/table/v1/driving/${coords}?${params}`;
+  await waitForRoutingSlot();
+  let body: unknown;
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "TurismoInteligentePasto/2.0" },
+      signal: AbortSignal.timeout(15000),
+    });
+    body = response.ok ? await response.json() : null;
+  } catch {
     throw new HttpError(
       503,
-      "No se pudieron comprobar las distancias por calles. Vuelve a intentar.",
+      "No se pudo conectar con el servicio de rutas por calles.",
     );
-  const measurements = new Map<string, Measurement>();
-  for (const value of response.data) {
-    if (
-      value.originIndex >= origins.length ||
-      value.destinationIndex >= destinations.length
-    )
-      continue;
-    if (
-      value.condition !== "ROUTE_EXISTS" ||
-      value.status?.code ||
-      value.distanceMeters === undefined ||
-      !value.duration
-    )
-      continue;
-    measurements.set(`${value.originIndex}:${value.destinationIndex}`, {
-      distanceMeters: value.distanceMeters,
-      durationSeconds: Number(value.duration.slice(0, -1)),
-    });
   }
-  return measurements;
+  const matrix = z
+    .object({
+      code: z.literal("Ok"),
+      distances: z.array(z.array(z.number().nonnegative().nullable())),
+      durations: z.array(z.array(z.number().nonnegative().nullable())),
+    })
+    .safeParse(body);
+  if (!matrix.success)
+    throw new HttpError(
+      503,
+      "No se pudieron comprobar las distancias por calles.",
+    );
+  origins.forEach((_, i) =>
+    destinations.forEach((_, j) => {
+      const d = matrix.data.distances[i]?.[j],
+        t = matrix.data.durations[i]?.[j];
+      if (d != null && t != null)
+        result.set(i + ":" + j, { distanceMeters: d, durationSeconds: t });
+    }),
+  );
+  return result;
 }
-
 export async function discoverReachablePlaces(
   spec: SearchSpec,
   pageToken?: string,
@@ -100,7 +79,7 @@ export async function discoverReachablePlaces(
       (active.travelMode !== "driving" || place.roadAccess),
   );
   const distances = await measureStreetRoutes(
-    [{ location: { latLng: { latitude: center[0], longitude: center[1] } } }],
+    [[center[0], center[1]]],
     candidates,
     active.travelMode,
   );
@@ -130,7 +109,7 @@ export async function discoverReachablePlaces(
         places.filter((place) => place.categoryKey === category).slice(0, 4),
       );
     const links = await measureStreetRoutes(
-      anchors.map((place) => ({ placeId: place.id.slice(7) })),
+      anchors.map((place) => place.coordinates),
       others,
       active.travelMode,
     );

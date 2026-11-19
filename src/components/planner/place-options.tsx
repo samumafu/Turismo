@@ -11,7 +11,7 @@ export function PlaceOptions({
   onViewItinerary: () => void;
 }) {
   const { state, actions } = usePlanner();
-  if (!state.results.length) return null;
+  if (!state.results.length && !state.discovery?.nextPageToken) return null;
   const groups = Map.groupBy(state.results, (place) => place.category);
   return (
     <section className="place-options" aria-labelledby="place-options-title">
@@ -91,9 +91,7 @@ export function PlaceOptions({
         </section>
       ))}
       <GoogleAttribution places={state.results} />
-      {state.action === "explore" &&
-      state.discovery?.nextPageToken &&
-      state.results.length < 60 ? (
+      {state.action === "explore" && state.discovery?.nextPageToken ? (
         <Button
           className="load-more-places"
           variant="outline"

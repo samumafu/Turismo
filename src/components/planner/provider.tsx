@@ -23,6 +23,9 @@ import { useUserLocation } from "./use-user-location";
 import {
   placeSchema,
   coordinateSchema,
+  departureSearchRequested,
+  pinRequested,
+  normalize,
   searchSpecSchema,
   searchResponseSchema,
   type Place,
@@ -78,6 +81,22 @@ type PlannerContextValue = {
   meta: { maxMessageLength: number };
 };
 const PlannerContext = createContext<PlannerContextValue | null>(null);
+function chatPlaces(places: Place[], selectedIds: string[], message: string) {
+  if (places.length <= 100) return places;
+  const text = normalize(message);
+  const selected = places.filter((place) => selectedIds.includes(place.id));
+  const mentioned = places.filter((place) =>
+    text.includes(normalize(place.name)),
+  );
+  const ordered = new Set([
+    ...places.slice(0, 3),
+    ...selected,
+    ...mentioned,
+    ...places,
+  ]);
+  const included = new Set([...ordered].slice(0, 100));
+  return places.filter((place) => included.has(place));
+}
 const initial: State = {
   action: "explore",
   results: [],
@@ -168,7 +187,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           demo,
           search: state.search,
           selectedIds: state.selectedIds,
-          knownPlaces: state.places,
+          knownPlaces: chatPlaces(state.places, state.selectedIds, text),
           origin: state.origin?.confirmed
             ? state.origin
             : location.position
@@ -206,14 +225,12 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           ...new Map(
             [...result.places, ...s.places].map((p) => [p.id, p]),
           ).values(),
-        ]
-          .filter(
-            (p) =>
-              result.places.some((v) => v.id === p.id) ||
-              selectedIds.includes(p.id) ||
-              (!result.discovery && s.results.some((v) => v.id === p.id)),
-          )
-          .slice(0, 100);
+        ].filter(
+          (p) =>
+            result.places.some((v) => v.id === p.id) ||
+            selectedIds.includes(p.id) ||
+            (!result.discovery && s.results.some((v) => v.id === p.id)),
+        );
         return {
           ...s,
           action: result.action,
@@ -263,6 +280,27 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }
   async function searchPlaces(spec: SearchSpec, text = "") {
     if (lock.current) return false;
+    if (departureSearchRequested(text)) {
+      const coordinates = state.origin?.confirmed
+        ? state.origin.coordinates
+        : location.position?.coordinates;
+      if (
+        !coordinates ||
+        (pinRequested(text) && state.origin?.source !== "pin")
+      ) {
+        setState((s) => ({
+          ...s,
+          error: "Pulsa «Poner pin de salida» y elige un punto en el mapa.",
+        }));
+        return false;
+      }
+      spec = {
+        ...spec,
+        center: coordinates,
+        near: undefined,
+        reference: undefined,
+      };
+    }
     lock.current = true;
     setState((s) => ({ ...s, busy: true, error: null }));
     try {
@@ -319,21 +357,21 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }
   async function loadJourney(snapshot: JourneySnapshot) {
     if (lock.current) return false;
-    if (snapshot.googlePlaceIds.length) {
+    if (snapshot.acceptedIds.length) {
       lock.current = true;
       setState((s) => ({ ...s, busy: true, error: null }));
       try {
         const response = await fetch("/api/places/resolve", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: snapshot.googlePlaceIds }),
+          body: JSON.stringify({ ids: snapshot.acceptedIds }),
           signal: AbortSignal.timeout(80000),
         });
         const body = await response.json();
         if (!response.ok)
           throw new Error(
             body.error ||
-              "No se pudieron actualizar los lugares de Google Maps.",
+              "No se pudieron actualizar los lugares de OpenStreetMap.",
           );
         const places = z
           .object({ places: z.array(placeSchema).max(25) })
@@ -399,13 +437,11 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ...new Map(
           [...s.places, ...result.places].map((p) => [p.id, p]),
         ).values(),
-      ]
-        .filter(
-          (p) =>
-            result.places.some((v) => v.id === p.id) ||
-            s.selectedIds.includes(p.id),
-        )
-        .slice(0, 100),
+      ].filter(
+        (p) =>
+          result.places.some((v) => v.id === p.id) ||
+          s.selectedIds.includes(p.id),
+      ),
       search: result.spec,
       notice: result.notice,
       error: null,
@@ -419,7 +455,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
   }
   async function morePlaces() {
     const token = state.discovery?.nextPageToken;
-    if (lock.current || !token || state.results.length >= 60) return;
+    if (lock.current || !token) return;
     lock.current = true;
     setState((s) => ({ ...s, busy: true, error: null }));
     try {
@@ -427,7 +463,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ spec: state.search, pageToken: token }),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(70000),
       });
       const body = await response.json();
       if (!response.ok)
@@ -437,7 +473,7 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
         ...new Map(
           [...state.results, ...result.places].map((p) => [p.id, p]),
         ).values(),
-      ].slice(0, 60);
+      ];
       setState((s) => ({ ...s, busy: false }));
       lock.current = false;
       discover(
@@ -445,7 +481,6 @@ export function PlannerProvider({ children }: { children: ReactNode }) {
           ...result,
           places,
           total: places.length,
-          nextPageToken: places.length >= 60 ? null : result.nextPageToken,
         },
         true,
       );

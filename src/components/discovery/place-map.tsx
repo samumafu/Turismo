@@ -1,6 +1,7 @@
 "use client";
 import type { Place } from "@/lib/places";
-export { default } from "./google-place-map";
+import dynamic from "next/dynamic";
+export default dynamic(() => import("./osm-place-map"), { ssr: false });
 export type Viewport = { center: [number, number]; radius: number };
 export type PlaceMapProps = {
   places: Place[];

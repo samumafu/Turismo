@@ -460,7 +460,7 @@ export async function resolveGoogleReference(
         .map((f) => `places.${f}`)
         .join(","),
       {
-        textQuery: `${spec.near} ${searchZones[spec.zone].label}, Nariño, Colombia`,
+        textQuery: `${spec.near}, Nariño, Colombia`,
         languageCode: "es",
         regionCode: "CO",
         pageSize: 5,

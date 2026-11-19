@@ -1,0 +1,1893 @@
+{
+  "project": "TRSMWB",
+  "projectName": "TurismoWeb",
+  "board": 74,
+  "boardUrl": "https://santiigetial.atlassian.net/jira/software/projects/TRSMWB/boards/74/backlog",
+  "date": "2026-11-11",
+  "sourceRepository": "https://github.com/samumafu/Turismo",
+  "scope": "Únicamente funcionalidad y tecnología presentes en el proyecto web actual. TUR se consulta como referencia de estructura y no se modifica.",
+  "statusPolicy": "Todos los elementos del backlog están Por hacer para planificación y revisión del usuario, como en TUR. La presencia de implementación en el código se documenta en las fuentes; no se usa para cerrar automáticamente tareas de sprints futuros. Los siete sprints permanecen futuros y sin fechas inventadas.",
+  "audit": {
+    "project": "TRSMWB",
+    "board": 74,
+    "total": 60,
+    "epics": 9,
+    "stories": 24,
+    "tasks": 27,
+    "sprints": 7,
+    "sprintAssignments": 51,
+    "uniqueAssignedIssues": 51,
+    "unassignedChildren": [],
+    "legacyUnchanged": true,
+    "outOfScopeMatches": [],
+    "errors": [],
+    "statuses": {
+      "Por hacer": 60
+    },
+    "unfinishedPerSprint": [
+      {
+        "sprint": 1,
+        "total": 6,
+        "todo": 6,
+        "done": 0
+      },
+      {
+        "sprint": 2,
+        "total": 10,
+        "todo": 10,
+        "done": 0
+      },
+      {
+        "sprint": 3,
+        "total": 6,
+        "todo": 6,
+        "done": 0
+      },
+      {
+        "sprint": 4,
+        "total": 6,
+        "todo": 6,
+        "done": 0
+      },
+      {
+        "sprint": 5,
+        "total": 5,
+        "todo": 5,
+        "done": 0
+      },
+      {
+        "sprint": 6,
+        "total": 6,
+        "todo": 6,
+        "done": 0
+      },
+      {
+        "sprint": 7,
+        "total": 12,
+        "todo": 12,
+        "done": 0
+      }
+    ],
+    "visibilityFix": "Se reabrieron los elementos marcados Listo o En curso para mostrar el backlog completo como trabajo pendiente de planificación."
+  },
+  "sprints": [
+    {
+      "number": 1,
+      "name": "TRSMWB Sprint 1 — Base web y estructura de datos",
+      "goal": "Preparar Next.js, React, TypeScript, las pantallas base, los endpoints y la conexión inicial con Supabase.",
+      "issues": [
+        "TRSMWB-10",
+        "TRSMWB-12",
+        "TRSMWB-52",
+        "TRSMWB-53",
+        "TRSMWB-54",
+        "TRSMWB-60"
+      ],
+      "id": 164,
+      "state": "future",
+      "verifiedIssueCount": 6,
+      "verifiedTodoCount": 6,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 2,
+      "name": "TRSMWB Sprint 2 — Base de datos, cuentas y viajes guardados",
+      "goal": "Implementar autenticación por correo, sesión y la lectura, escritura y restauración del viaje en Supabase.",
+      "issues": [
+        "TRSMWB-38",
+        "TRSMWB-39",
+        "TRSMWB-40",
+        "TRSMWB-41",
+        "TRSMWB-42",
+        "TRSMWB-43",
+        "TRSMWB-44",
+        "TRSMWB-55",
+        "TRSMWB-56",
+        "TRSMWB-57"
+      ],
+      "id": 165,
+      "state": "future",
+      "verifiedIssueCount": 10,
+      "verifiedTodoCount": 10,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 3,
+      "name": "TRSMWB Sprint 3 — Búsqueda de lugares con Google Places",
+      "goal": "Implementar búsqueda por zona, categoría, nombre y distancia, referencias, paginación, fotografías y fichas.",
+      "issues": [
+        "TRSMWB-14",
+        "TRSMWB-15",
+        "TRSMWB-16",
+        "TRSMWB-17",
+        "TRSMWB-18",
+        "TRSMWB-19"
+      ],
+      "id": 166,
+      "state": "future",
+      "verifiedIssueCount": 6,
+      "verifiedTodoCount": 6,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 4,
+      "name": "TRSMWB Sprint 4 — Modelo de IA Gemini y conversación",
+      "goal": "Conectar el SDK y el modelo Gemini con el chat, validar las respuestas y restringir el asistente a las funciones de la aplicación.",
+      "issues": [
+        "TRSMWB-20",
+        "TRSMWB-21",
+        "TRSMWB-22",
+        "TRSMWB-23",
+        "TRSMWB-24",
+        "TRSMWB-58"
+      ],
+      "id": 167,
+      "state": "future",
+      "verifiedIssueCount": 6,
+      "verifiedTodoCount": 6,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 5,
+      "name": "TRSMWB Sprint 5 — Gestión de itinerarios",
+      "goal": "Organizar visitas elegidas, editar el orden y la agenda, y reiniciar o recuperar el viaje.",
+      "issues": [
+        "TRSMWB-13",
+        "TRSMWB-25",
+        "TRSMWB-26",
+        "TRSMWB-27",
+        "TRSMWB-28"
+      ],
+      "id": 168,
+      "state": "future",
+      "verifiedIssueCount": 5,
+      "verifiedTodoCount": 5,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 6,
+      "name": "TRSMWB Sprint 6 — Google Maps y trazado de rutas",
+      "goal": "Integrar el mapa, Google Routes, modos de recorrido, GPS, pin y referencias como puntos de salida.",
+      "issues": [
+        "TRSMWB-29",
+        "TRSMWB-30",
+        "TRSMWB-31",
+        "TRSMWB-32",
+        "TRSMWB-33",
+        "TRSMWB-59"
+      ],
+      "id": 169,
+      "state": "future",
+      "verifiedIssueCount": 6,
+      "verifiedTodoCount": 6,
+      "verifiedDoneCount": 0
+    },
+    {
+      "number": 7,
+      "name": "TRSMWB Sprint 7 — Navegación GPS, responsive y pruebas",
+      "goal": "Completar el avance automático a 20 metros, controles manuales, navegación móvil y comprobaciones de la aplicación.",
+      "issues": [
+        "TRSMWB-11",
+        "TRSMWB-34",
+        "TRSMWB-35",
+        "TRSMWB-36",
+        "TRSMWB-37",
+        "TRSMWB-45",
+        "TRSMWB-46",
+        "TRSMWB-47",
+        "TRSMWB-48",
+        "TRSMWB-49",
+        "TRSMWB-50",
+        "TRSMWB-51"
+      ],
+      "id": 170,
+      "state": "future",
+      "verifiedIssueCount": 12,
+      "verifiedTodoCount": 12,
+      "verifiedDoneCount": 0
+    }
+  ],
+  "epics": [
+    {
+      "key": "TRSMWB-1",
+      "code": "WEB",
+      "title": "EP-01 — Desarrollo de la aplicación web con Next.js y React",
+      "goal": "Ofrecer un planificador web en español, usable como invitado desde teléfono, tablet y escritorio con Next.js y React.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "WEB-01",
+          "key": "TRSMWB-10",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-10",
+          "title": "Usar el planificador web como invitado",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero explorar Nariño desde el navegador sin registrarme para empezar mi recorrido de inmediato.",
+          "criteria": [
+            "Las entradas / y /planificar muestran el mismo planificador web.",
+            "Chat, búsqueda, selección de visitas y mapa funcionan sin iniciar sesión.",
+            "El registro se solicita para guardar el viaje en la cuenta, no para descubrir lugares."
+          ],
+          "sources": [
+            "src/app/page.tsx",
+            "src/app/planificar/page.tsx",
+            "src/components/planner/workspace.tsx"
+          ],
+          "dependencies": [],
+          "parent": "TRSMWB-1",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-01",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "WEB-02",
+          "key": "TRSMWB-11",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-11",
+          "title": "Navegar entre conversación, mapa e itinerario en teléfonos",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero cambiar de sección desde opciones superiores para evitar una página con todos los paneles apilados.",
+          "criteria": [
+            "En móvil se muestra una sección a la vez mediante Conversar, Mapa e Itinerario.",
+            "En escritorio se conserva la composición de chat y área de viaje.",
+            "Los enlaces internos y los resultados nuevos abren la sección correcta; el diseño admite 320 px sin desbordamiento horizontal."
+          ],
+          "sources": [
+            "src/components/planner/workspace.tsx",
+            "src/app/globals.css"
+          ],
+          "dependencies": [
+            "TRSMWB-10"
+          ],
+          "parent": "TRSMWB-1",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-02",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "WEB-03",
+          "key": "TRSMWB-12",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-12",
+          "title": "Usar controles, fichas y ventanas accesibles",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero controles legibles y operables con teclado y pantalla táctil para usar la app desde distintos dispositivos.",
+          "criteria": [
+            "Campos y botones tienen etiquetas y foco visible; los diálogos tienen título y cierre.",
+            "Los controles móviles principales admiten un objetivo táctil de 44 px y los textos largos se ajustan al ancho.",
+            "Se conservan la identidad visual, el movimiento reducido y las fichas con fotografías y atribución."
+          ],
+          "sources": [
+            "src/app/globals.css",
+            "src/components/ui/dialog.tsx",
+            "src/components/discovery/place-preview.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-10"
+          ],
+          "parent": "TRSMWB-1",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-03",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "WEB-04",
+          "key": "TRSMWB-13",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-13",
+          "title": "Reiniciar un viaje y deshacer el reinicio",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero empezar un viaje nuevo y poder deshacerlo para recuperar una elección accidental.",
+          "criteria": [
+            "Nuevo viaje limpia conversación, búsqueda e itinerario del estado activo.",
+            "Deshacer recupera el estado previo mientras permanezca disponible en la sesión.",
+            "No se reinicia durante una solicitud en curso; cualquier seguimiento de GPS anterior se detiene al cambiar el contexto."
+          ],
+          "sources": [
+            "src/components/planner/chat.tsx",
+            "src/components/planner/provider.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-10"
+          ],
+          "parent": "TRSMWB-1",
+          "sprint": 5,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-04",
+            "sprint-5"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "WEB-05",
+          "key": "TRSMWB-52",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-52",
+          "title": "Implementar la base del proyecto web con Next.js, React y TypeScript",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Configurar el proyecto web y sus dependencias de interfaz y desarrollo.",
+          "criteria": [
+            "El proyecto ejecuta Next.js y React con TypeScript mediante los scripts de package.json.",
+            "La estructura App Router separa páginas, componentes y lógica compartida.",
+            "La configuración de estilos y componentes permite construir la interfaz actual."
+          ],
+          "sources": [
+            "package.json",
+            "src/app/layout.tsx",
+            "src/app/globals.css",
+            "tsconfig.json",
+            "next.config.ts"
+          ],
+          "dependencies": [],
+          "parent": "TRSMWB-1",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-05",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "WEB-06",
+          "key": "TRSMWB-60",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-60",
+          "title": "Implementar los endpoints web de chat, lugares y rutas",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Exponer las operaciones del planificador como Route Handlers de la aplicación Next.js.",
+          "criteria": [
+            "La aplicación dispone de /api/chat y /api/route.",
+            "La búsqueda, fotografías y recuperación de lugares disponen de sus endpoints /api/places.",
+            "Los endpoints validan las entradas y devuelven errores controlados con formatos que consume la interfaz."
+          ],
+          "sources": [
+            "src/app/api/chat/route.ts",
+            "src/app/api/route/route.ts",
+            "src/app/api/places/search/route.ts",
+            "src/app/api/places/photo/route.ts",
+            "src/app/api/places/resolve/route.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-52"
+          ],
+          "parent": "TRSMWB-1",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-01",
+            "web-06",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-2",
+      "code": "LUG",
+      "title": "EP-02 — Búsqueda y contenido con Google Places",
+      "goal": "Encontrar lugares reales de Nariño con Google Places y distancias por calles, sin catálogo manual ni destinos de relleno.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "LUG-01",
+          "key": "TRSMWB-14",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-14",
+          "title": "Implementar búsqueda de lugares con Google Places y filtros",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero buscar lugares con el chat o filtros para encontrar opciones acordes con mi interés.",
+          "criteria": [
+            "Se admiten las nueve zonas y las once categorías declaradas en places.ts, hasta tres categorías por búsqueda.",
+            "El radio admite de 100 a 25000 m y conserva distancias personalizadas; se diferencian a pie y carro.",
+            "La consulta por nombre y los filtros manuales usan las API web de búsqueda de Google, sin catálogos Flutter u OSM."
+          ],
+          "sources": [
+            "src/lib/places.ts",
+            "src/components/discovery/explorer.tsx",
+            "src/app/api/places/search/route.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-60"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-01",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "LUG-02",
+          "key": "TRSMWB-15",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-15",
+          "title": "Resolver referencias geográficas con Google Places sin exigir GPS",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero buscar cerca de una universidad u otra referencia para descubrir opciones desde un lugar conocido.",
+          "criteria": [
+            "El servidor consulta el nombre y municipio en Google y utiliza coordenadas del resultado real.",
+            "La referencia se separa del nombre del destino solicitado.",
+            "Una referencia inexistente o ambigua pide precisión de sede o dirección y no inventa coordenadas."
+          ],
+          "sources": [
+            "src/lib/server/google-maps.ts",
+            "src/lib/places.ts",
+            "tests/google-reference.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-02",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "LUG-03",
+          "key": "TRSMWB-16",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-16",
+          "title": "Calcular cercanía entre lugares mediante distancias por calles",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que las opciones cercanas estén conectadas por calles para que la proximidad tenga sentido en mi recorrido.",
+          "criteria": [
+            "Compute Route Matrix comprueba distancia y duración; un resultado fuera del límite vial se descarta.",
+            "Las búsquedas combinadas exigen una combinación con todas las categorías y una conexión corta conforme al límite del servidor.",
+            "Las matrices se acotan a 48 elementos y los fallos no se sustituyen por distancias inventadas."
+          ],
+          "sources": [
+            "src/lib/server/route-discovery.ts",
+            "tests/route-discovery.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-03",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "LUG-04",
+          "key": "TRSMWB-17",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-17",
+          "title": "Implementar paginación y deduplicación de resultados de Google Places",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero ampliar una búsqueda para comparar más opciones del mismo contexto.",
+          "criteria": [
+            "Ver más lugares utiliza nextPageToken conservando exactamente la consulta y sus filtros.",
+            "Se eliminan IDs duplicados y se limita la búsqueda a 60 lugares.",
+            "Al agotarse la continuación se oculta la opción; paginar no reinicia una ruta activa."
+          ],
+          "sources": [
+            "src/lib/server/discovery.ts",
+            "src/components/planner/provider.tsx",
+            "tests/google-maps.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-04",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "LUG-05",
+          "key": "TRSMWB-18",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-18",
+          "title": "Integrar fotografías de Google Places con atribución",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero ver y ampliar fotografías del lugar para reconocerlo antes de elegirlo.",
+          "criteria": [
+            "Las fotos pertenecen al ID Google del lugar y muestran autoría y atribución.",
+            "Se solicitan al entrar en pantalla con concurrencia acotada; se pueden ampliar en un diálogo.",
+            "Sin foto se informa su ausencia; no se sustituyen imágenes de otros lugares ni se guardan fotos en la cuenta."
+          ],
+          "sources": [
+            "src/components/discovery/place-photo.tsx",
+            "src/lib/place-photos.ts",
+            "src/app/api/places/photo/route.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-05",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "LUG-06",
+          "key": "TRSMWB-19",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-19",
+          "title": "Mostrar fichas verificables y comunicar datos desconocidos",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero distinguir información recibida de Google de datos que debo confirmar antes de visitar un lugar.",
+          "criteria": [
+            "Los registros válidos pertenecen a Colombia y Nariño, tienen ID y coordenadas válidos y fuente identificable.",
+            "La ficha muestra información disponible, observación y enlace de Google; costos desconocidos permanecen desconocidos.",
+            "No se garantizan apertura, calidad ni seguridad y se impide aceptar lugares restringidos."
+          ],
+          "sources": [
+            "src/lib/server/google-maps.ts",
+            "src/lib/places.ts",
+            "src/components/discovery/place-preview.tsx",
+            "src/components/planner/place-options.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-2",
+          "sprint": 3,
+          "labels": [
+            "turismo-web",
+            "ep-02",
+            "lug-06",
+            "sprint-3"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-3",
+      "code": "IA",
+      "title": "EP-03 — Implementación del modelo de IA Gemini y chat",
+      "goal": "Interpretar solicitudes de viaje y ayudar a usar Turismo Nariño sin respuestas generales ni selección de destinos no aceptados.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "IA-01",
+          "key": "TRSMWB-20",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-20",
+          "title": "Implementar el chat web e interpretar solicitudes mediante IA",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Conectar la conversación con el endpoint de chat y convertir los mensajes en acciones y filtros del planificador.",
+          "criteria": [
+            "El chat envía mensajes, perfil, búsqueda y visitas seleccionadas al servidor.",
+            "La respuesta del modelo distingue explorar, organizar y aclarar.",
+            "El estado de carga y los fallos se muestran sin bloquear las siguientes búsquedas."
+          ],
+          "sources": [
+            "src/components/planner/chat.tsx",
+            "src/components/planner/provider.tsx",
+            "src/app/api/chat/route.ts",
+            "src/lib/server/gemini.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-58",
+            "TRSMWB-60"
+          ],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-01",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IA-02",
+          "key": "TRSMWB-21",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-21",
+          "title": "Limitar el modelo de IA a las funciones de la aplicación",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como responsable del producto, quiero limitar el asistente a las funciones de la app para evitar respuestas de propósito general.",
+          "criteria": [
+            "Solo se admiten descubrimiento en Nariño, visitas, recorridos, mapa, GPS, pines, cuenta y viaje guardado.",
+            "Una petición ajena o de cambio de rol recibe una respuesta fija de alcance, sin responder su contenido.",
+            "El rechazo conserva ruta, origen, filtros y visitas; no se muestra texto libre ajeno generado por el modelo."
+          ],
+          "sources": [
+            "src/lib/server/gemini.ts",
+            "src/app/api/chat/route.ts",
+            "src/components/planner/provider.tsx",
+            "tests/gemini.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-58"
+          ],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-02",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IA-03",
+          "key": "TRSMWB-22",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-22",
+          "title": "Validar respuestas estructuradas de IA y usar solo lugares seleccionados",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que la IA trabaje únicamente con destinos existentes y mis decisiones para evitar recorridos inventados.",
+          "criteria": [
+            "El servidor filtra registros verificados y no acepta IDs inventados por Gemini.",
+            "Pedir cafeterías o parques produce opciones, sin agregarlas automáticamente al itinerario.",
+            "Elegir o retirar visitas por nombre u ordinal se limita a coincidencias conocidas; las sugerencias no implican aceptación."
+          ],
+          "sources": [
+            "src/app/api/chat/route.ts",
+            "src/lib/accepted-journey.ts",
+            "tests/gemini.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-58",
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-03",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IA-04",
+          "key": "TRSMWB-23",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-23",
+          "title": "Reemplazar los resultados y la ruta visible al buscar otra cosa",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero realizar una búsqueda nueva después de trazar una ruta para explorar otra opción sin quedar anclado al recorrido anterior.",
+          "criteria": [
+            "La solicitud explícita de búsqueda usa explore aunque Gemini sugiera plan y existan visitas aceptadas.",
+            "Se actualizan zona, categorías y referencias, y se retiran la ruta y los marcadores anteriores del mapa.",
+            "También una búsqueda vacía limpia el resultado visible anterior; las visitas elegidas se conservan en Itinerario y pueden volver a abrirse."
+          ],
+          "sources": [
+            "src/app/api/chat/route.ts",
+            "src/components/planner/provider.tsx",
+            "src/components/planner/journey-map.tsx",
+            "tests/gemini.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-04",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IA-05",
+          "key": "TRSMWB-24",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-24",
+          "title": "Implementar el asistente por reglas ante fallos o cuotas de Gemini",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero seguir buscando y organizando visitas si Gemini no está disponible.",
+          "criteria": [
+            "Sin clave, ante cuota, timeout o JSON inválido se usa el asistente por reglas con los mismos lugares Google.",
+            "Los avisos distinguen cuota, permisos, modelo y respuesta inválida sin exponer claves ni respuestas crudas.",
+            "No hay reintentos automáticos para eludir límites; se evita enviar dos mensajes concurrentes y se recupera el borrador si falla."
+          ],
+          "sources": [
+            "src/lib/server/gemini.ts",
+            "src/components/planner/chat.tsx",
+            "src/components/planner/provider.tsx",
+            "tests/gemini.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-58"
+          ],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-05",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IA-06",
+          "key": "TRSMWB-58",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-58",
+          "title": "Integrar el modelo Gemini con el SDK de Google y configuración del servidor",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Implementar las llamadas al modelo de IA que interpreta los mensajes del planificador.",
+          "criteria": [
+            "El servidor usa @google/genai con GEMINI_API_KEY y el modelo indicado en GEMINI_MODEL.",
+            "La clave permanece en el servidor; el navegador llama a la API de la aplicación.",
+            "Las llamadas establecen límites de tiempo, salida estructurada y control de solicitudes."
+          ],
+          "sources": [
+            "src/lib/server/gemini.ts",
+            ".env.example",
+            "src/app/api/chat/route.ts",
+            "tests/gemini.test.ts"
+          ],
+          "dependencies": [],
+          "parent": "TRSMWB-3",
+          "sprint": 4,
+          "labels": [
+            "turismo-web",
+            "ep-03",
+            "ia-06",
+            "sprint-4"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-4",
+      "code": "IT",
+      "title": "EP-04 — Gestión de itinerarios y visitas seleccionadas",
+      "goal": "Mantener una agenda de visitas elegidas por el viajero, con orden editable y tiempos orientativos.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "IT-01",
+          "key": "TRSMWB-25",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-25",
+          "title": "Añadir únicamente las visitas elegidas al itinerario",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero decidir qué opciones visitar para conservar control sobre mi recorrido.",
+          "criteria": [
+            "Añadir o quitar desde una ficha actualiza la selección y el itinerario de forma coherente.",
+            "La selección deduplica IDs, admite hasta 25 visitas y excluye las restringidas.",
+            "Sin visitas aceptadas se muestra el estado vacío, incluso si hay resultados o sugerencias de IA."
+          ],
+          "sources": [
+            "src/lib/accepted-journey.ts",
+            "src/components/planner/provider.tsx",
+            "src/components/planner/place-options.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-19"
+          ],
+          "parent": "TRSMWB-4",
+          "sprint": 5,
+          "labels": [
+            "turismo-web",
+            "ep-04",
+            "it-01",
+            "sprint-5"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IT-02",
+          "key": "TRSMWB-26",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-26",
+          "title": "Quitar y reordenar visitas conservando las demás",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero subir, bajar o retirar una parada para adaptar el recorrido a mis decisiones.",
+          "criteria": [
+            "Los controles impiden mover más allá de los extremos y conservan el orden de las visitas restantes.",
+            "El itinerario y el conjunto de destinos de la ruta se actualizan sin añadir lugares nuevos.",
+            "El orden es el elegido por el usuario; no se presenta como una optimización automática de distancia."
+          ],
+          "sources": [
+            "src/components/planner/itinerary.tsx",
+            "src/components/planner/provider.tsx",
+            "tests/accepted-journey.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-25"
+          ],
+          "parent": "TRSMWB-4",
+          "sprint": 5,
+          "labels": [
+            "turismo-web",
+            "ep-04",
+            "it-02",
+            "sprint-5"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IT-03",
+          "key": "TRSMWB-27",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-27",
+          "title": "Consultar jornadas y una agenda orientativa",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero ver mis visitas agrupadas por día para comprender el recorrido que elegí.",
+          "criteria": [
+            "La agenda admite hasta cinco jornadas con hasta cinco paradas por jornada.",
+            "Se validan formato horario, duración, secuencia y ausencia de solapamientos de una agenda propuesta.",
+            "Las duraciones y separaciones son orientativas: no representan horarios de apertura, tarifas ni tiempos viales garantizados."
+          ],
+          "sources": [
+            "src/lib/accepted-journey.ts",
+            "src/lib/schemas.ts",
+            "src/components/planner/itinerary.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-25"
+          ],
+          "parent": "TRSMWB-4",
+          "sprint": 5,
+          "labels": [
+            "turismo-web",
+            "ep-04",
+            "it-03",
+            "sprint-5"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "IT-04",
+          "key": "TRSMWB-28",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-28",
+          "title": "Ajustar preferencias y conservar una agenda válida",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero modificar mis preferencias sin perder las visitas que ya acepté.",
+          "criteria": [
+            "Un cambio de perfil no incorpora destinos sugeridos ni elimina visitas sin una decisión explícita.",
+            "Se conserva una agenda propuesta válida cuando mantiene exactamente los IDs y el orden aceptados.",
+            "Los valores desconocidos siguen siendo desconocidos; no se garantiza presupuesto ni apertura por modificar el perfil."
+          ],
+          "sources": [
+            "src/app/api/chat/route.ts",
+            "src/lib/accepted-journey.ts",
+            "src/lib/planning.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-27"
+          ],
+          "parent": "TRSMWB-4",
+          "sprint": 5,
+          "labels": [
+            "turismo-web",
+            "ep-04",
+            "it-04",
+            "sprint-5"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-5",
+      "code": "RUT",
+      "title": "EP-05 — Integración de Google Maps y trazado de rutas",
+      "goal": "Mostrar mapas y rutas reales de Google desde GPS, un pin o una referencia, hacia los destinos elegidos.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "RUT-01",
+          "key": "TRSMWB-29",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-29",
+          "title": "Explorar marcadores y fichas en Google Maps",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero identificar las opciones en un mapa interactivo para consultar sus fichas y elegir visitas.",
+          "criteria": [
+            "El mapa usa Google Maps JavaScript y marcadores vinculados a los mismos IDs de las tarjetas.",
+            "Un marcador abre la ficha correcta y conserva la señal de visita elegida.",
+            "Cambiar entre mapa e itinerario conserva el mapa montado; una búsqueda nueva ajusta la vista a sus resultados."
+          ],
+          "sources": [
+            "src/components/discovery/google-place-map.tsx",
+            "src/components/planner/workspace.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-14"
+          ],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-01",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "RUT-02",
+          "key": "TRSMWB-30",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-30",
+          "title": "Implementar el trazado de rutas con Google Routes API",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero ver el trayecto vial hacia un destino o las paradas del día para saber cómo llegar.",
+          "criteria": [
+            "Routes API recibe destinos válidos por ID y hasta cinco paradas, con origen cuando está disponible.",
+            "Se dibuja la geometría real y se muestran distancia, duración aproximada e indicaciones.",
+            "Se conserva el orden elegido; las solicitudes anteriores se cancelan al cambiar el destino y el error permite reintentar sin rutas inventadas."
+          ],
+          "sources": [
+            "src/app/api/route/route.ts",
+            "src/lib/server/google-routes.ts",
+            "src/components/planner/journey-map.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-59"
+          ],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-02",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "RUT-03",
+          "key": "TRSMWB-31",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-31",
+          "title": "Elegir salida con GPS o un pin en el mapa",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero colocar un pin cuando el GPS no esté disponible para poder trazar la ruta igualmente.",
+          "criteria": [
+            "GPS se solicita por una acción explícita y el mapa identifica su posición y precisión.",
+            "Poner pin permite tocar el mapa, elegir un marcador o usar el centro, dentro del área admitida.",
+            "El pin es origen confirmado; si falla una petición posterior de GPS se conserva la salida elegida."
+          ],
+          "sources": [
+            "src/components/planner/use-user-location.ts",
+            "src/components/planner/journey-map.tsx",
+            "src/components/discovery/google-place-map.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-30"
+          ],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-03",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "RUT-04",
+          "key": "TRSMWB-32",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-32",
+          "title": "Usar la referencia del mensaje como punto de partida",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que una búsqueda cerca de una universidad o desde un lugar conocido inicie la ruta allí.",
+          "criteria": [
+            "Cerca de Universidad X, en la Universidad X y una salida explícita se resuelven con Google.",
+            "La referencia localizada se usa como salida hacia las visitas elegidas y se puede sustituir con un pin.",
+            "La salida de referencia obsoleta no ancla una búsqueda independiente en otra zona; un pin manual puede conservarse."
+          ],
+          "sources": [
+            "src/lib/places.ts",
+            "src/app/api/chat/route.ts",
+            "src/components/planner/provider.tsx",
+            "tests/google-reference.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-15",
+            "TRSMWB-31"
+          ],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-04",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "RUT-05",
+          "key": "TRSMWB-33",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-33",
+          "title": "Abrir el recorrido en Google Maps y gestionar modos sin trazado interno",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero continuar en Google Maps para usar sus opciones externas de navegación o transporte público.",
+          "criteria": [
+            "El enlace conserva destinos, orden y origen disponible con el modo seleccionado.",
+            "El transporte público se abre en Google Maps; la app no inventa horarios, cobertura ni trazado interno de buses.",
+            "Sin origen se explica cuándo empieza en la primera visita; destinos sin acceso válido no generan un trayecto falso."
+          ],
+          "sources": [
+            "src/lib/places.ts",
+            "src/components/planner/journey-map.tsx",
+            "src/app/api/route/route.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-30"
+          ],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-05",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "RUT-06",
+          "key": "TRSMWB-59",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-59",
+          "title": "Integrar Maps JavaScript API y configurar las claves de Google Maps",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Cargar el mapa web y conectar los servicios de mapas con la configuración del entorno.",
+          "criteria": [
+            "El navegador carga Google Maps mediante el cargador del proyecto.",
+            "La clave pública del mapa y la clave de servicios del servidor usan variables distintas.",
+            "La falta de configuración o un fallo del proveedor muestra un estado visible en la interfaz."
+          ],
+          "sources": [
+            "src/components/discovery/google-place-map.tsx",
+            "src/lib/server/google-maps.ts",
+            ".env.example",
+            "docs/google-maps.md"
+          ],
+          "dependencies": [],
+          "parent": "TRSMWB-5",
+          "sprint": 6,
+          "labels": [
+            "turismo-web",
+            "ep-05",
+            "rut-06",
+            "sprint-6"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-6",
+      "code": "GPS",
+      "title": "EP-06 — Navegación GPS y avance automático entre destinos",
+      "goal": "Avanzar entre las visitas de una jornada con detección de llegada por GPS o confirmación manual, liberando el seguimiento al terminar.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "GPS-01",
+          "key": "TRSMWB-34",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-34",
+          "title": "Iniciar un recorrido del día y mostrar la parada activa",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero iniciar el recorrido una sola vez para seguir mis visitas en orden.",
+          "criteria": [
+            "Iniciar recorrido toma las paradas de la jornada del itinerario y empieza por la primera.",
+            "Se muestra Parada N de total y la ruta se dirige únicamente al destino activo, sin cambiar manualmente el selector.",
+            "El modo se ofrece a pie o en carro y mantiene accesibles la pausa y la confirmación de llegada."
+          ],
+          "sources": [
+            "src/components/planner/journey-map.tsx",
+            "src/components/planner/use-journey-navigation.ts",
+            "src/lib/journey-navigation.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-27",
+            "TRSMWB-30"
+          ],
+          "parent": "TRSMWB-6",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-06",
+            "gps-01",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "GPS-02",
+          "key": "TRSMWB-35",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-35",
+          "title": "Avanzar automáticamente tras confirmar llegada dentro de 20 metros",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que el GPS detecte mi llegada para cambiar automáticamente al siguiente destino.",
+          "criteria": [
+            "El radio de llegada y la precisión máxima aceptada son 20 m; texto y lógica comparten la misma constante.",
+            "Se exigen lecturas distintas, recientes y válidas, con al menos tres segundos de permanencia; lecturas de más de 15 s o señal imprecisa no confirman.",
+            "Una lectura no salta varias paradas; en sitios cercanos se requiere evidencia de acercamiento al siguiente y una interrupción reinicia la confirmación."
+          ],
+          "sources": [
+            "src/lib/journey-navigation.ts",
+            "src/components/planner/use-journey-navigation.ts",
+            "tests/journey-navigation.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-34"
+          ],
+          "parent": "TRSMWB-6",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-06",
+            "gps-02",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "GPS-03",
+          "key": "TRSMWB-36",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-36",
+          "title": "Confirmar Ya llegué cuando no haya GPS fiable",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero confirmar mi llegada manualmente para continuar si deniego el permiso o el GPS es impreciso.",
+          "criteria": [
+            "Al denegar GPS el seguimiento queda en pausa y se explica cómo reanudar o continuar manualmente.",
+            "Ya llegué avanza una sola parada y funciona sin ubicación.",
+            "Sin una lectura GPS fiable y cercana, la siguiente ruta sale de la parada confirmada; no se fabrica una posición GPS."
+          ],
+          "sources": [
+            "src/lib/journey-navigation.ts",
+            "src/components/planner/use-journey-navigation.ts",
+            "src/components/planner/use-user-location.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-34"
+          ],
+          "parent": "TRSMWB-6",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-06",
+            "gps-03",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "GPS-04",
+          "key": "TRSMWB-37",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-37",
+          "title": "Pausar, finalizar y cancelar el seguimiento sin consultas continuas",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero controlar cuándo se sigue mi ubicación para completar o cambiar mi recorrido con claridad.",
+          "criteria": [
+            "Pausar, salir y completar la última parada liberan watchPosition; la finalización muestra Recorrido completado.",
+            "Una búsqueda nueva, cambio de jornada o de visitas detiene el recorrido anterior y no deja rutas o seguimientos activos obsoletos.",
+            "Las lecturas actualizan la ubicación; Routes API se recalcula al cambiar de tramo, sin una petición por cada lectura. Se indica mantener la página abierta."
+          ],
+          "sources": [
+            "src/components/planner/use-user-location.ts",
+            "src/components/planner/use-journey-navigation.ts",
+            "src/components/planner/journey-map.tsx",
+            "tests/journey-navigation.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-34"
+          ],
+          "parent": "TRSMWB-6",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-06",
+            "gps-04",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-7",
+      "code": "CTA",
+      "title": "EP-07 — Registro, autenticación y cuenta de usuario",
+      "goal": "Gestionar registro, correo de confirmación, sesión y recuperación de contraseña desde la aplicación web.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "CTA-01",
+          "key": "TRSMWB-38",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-38",
+          "title": "Registrar una cuenta e iniciar sesión con correo y contraseña",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero identificarme para guardar y recuperar mi viaje privado.",
+          "criteria": [
+            "La cuenta se abre en un diálogo con campos etiquetados, validación y opción de mostrar contraseña.",
+            "El registro conserva la verificación por correo y los errores distinguen credenciales, confirmación y configuración.",
+            "Se evita presentar como autenticado un usuario sin sesión válida; el uso como invitado sigue disponible."
+          ],
+          "sources": [
+            "src/components/planner/account.tsx",
+            "src/lib/supabase.ts",
+            "src/lib/auth-errors.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-10"
+          ],
+          "parent": "TRSMWB-7",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-07",
+            "cta-01",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "CTA-02",
+          "key": "TRSMWB-39",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-39",
+          "title": "Confirmar correo y procesar el retorno de autenticación",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que el enlace de confirmación me devuelva al planificador con sesión para continuar mi viaje.",
+          "criteria": [
+            "Se procesa el retorno y se establece explícitamente la sesión cuando corresponde.",
+            "La confirmación comprueba el usuario y no confunde un enlace de recuperación con registro.",
+            "Enlaces vencidos, consumidos o ausentes muestran una salida clara; se limpian tokens de la URL."
+          ],
+          "sources": [
+            "src/lib/auth-links.ts",
+            "src/components/auth/email-confirmation.tsx",
+            "src/app/auth/confirmar/page.tsx",
+            "tests/auth-links.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-38"
+          ],
+          "parent": "TRSMWB-7",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-07",
+            "cta-02",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "CTA-03",
+          "key": "TRSMWB-40",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-40",
+          "title": "Recuperar la contraseña mediante un enlace de un solo uso",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero recuperar mi acceso sin confundir la recuperación con la confirmación de correo.",
+          "criteria": [
+            "La recuperación se solicita desde la cuenta cuando corresponde y utiliza su ruta específica.",
+            "Solo una sesión de recuperación válida permite establecer y confirmar la contraseña nueva.",
+            "Un retorno de registro o un enlace inválido no autoriza el cambio; al completarlo se vuelve al planificador."
+          ],
+          "sources": [
+            "src/components/auth/password-recovery.tsx",
+            "src/app/auth/recuperar/page.tsx",
+            "src/lib/auth-links.ts",
+            "tests/auth-links.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-38"
+          ],
+          "parent": "TRSMWB-7",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-07",
+            "cta-03",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "CTA-04",
+          "key": "TRSMWB-41",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-41",
+          "title": "Mantener la sesión y limpiar datos al cerrar cuenta",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero que mi sesión sobreviva a una recarga y pueda cerrarla para proteger mi información en el navegador.",
+          "criteria": [
+            "El cliente recupera la sesión y refleja su estado de carga antes de ofrecer acciones de cuenta.",
+            "Las suscripciones de autenticación se liberan y una sesión nueva no reutiliza datos privados de otra cuenta.",
+            "Cerrar sesión reinicia el viaje activo y sus seguimientos; los tokens no se muestran en mensajes ni se conservan en la URL."
+          ],
+          "sources": [
+            "src/components/planner/account.tsx",
+            "src/lib/supabase.ts",
+            "tests/auth-links.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-38"
+          ],
+          "parent": "TRSMWB-7",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-07",
+            "cta-04",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "CTA-07",
+          "key": "TRSMWB-44",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-44",
+          "title": "Mostrar mensajes claros ante errores de autenticación y guardado",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero entender por qué falla el acceso o el guardado para saber cómo continuar.",
+          "criteria": [
+            "La interfaz distingue credenciales inválidas, confirmación pendiente, problemas de correo y límites de solicitudes.",
+            "Un fallo al guardar o abrir el viaje se comunica sin confirmar una operación fallida.",
+            "Los mensajes visibles no muestran claves ni credenciales del servidor."
+          ],
+          "sources": [
+            "src/lib/auth-errors.ts",
+            "src/components/planner/account.tsx",
+            "tests/auth-errors.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-42"
+          ],
+          "parent": "TRSMWB-7",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-07",
+            "cta-07",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-8",
+      "code": "QA",
+      "title": "EP-08 — Integración, pruebas y documentación de la web",
+      "goal": "Verificar la aplicación web y sus integraciones existentes, mantener su configuración y actualizar su documentación.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "QA-01",
+          "key": "TRSMWB-45",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-45",
+          "title": "Configurar compilación y cabeceras de la aplicación Next.js",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Mantener la configuración de ejecución y compilación web utilizada por el proyecto.",
+          "criteria": [
+            "Los scripts de desarrollo, compilación, inicio, lint y tipos están declarados en package.json.",
+            "next.config.ts define las cabeceras y permite un directorio de compilación separado.",
+            "La aplicación genera sus rutas web y sus endpoints durante la compilación."
+          ],
+          "sources": [
+            "package.json",
+            "next.config.ts",
+            "tsconfig.json"
+          ],
+          "dependencies": [
+            "TRSMWB-10"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-01",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "QA-02",
+          "key": "TRSMWB-46",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-46",
+          "title": "Validar solicitudes, firmar lugares y proteger claves y cuotas",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como responsable técnico, quiero limitar entradas manipuladas y consumo de proveedores para proteger el servicio.",
+          "criteria": [
+            "Las API comprueban origen, tamaño del cuerpo, esquemas y límites de frecuencia; los registros de lugar se firman y caducan.",
+            "Las claves de servidor no se incluyen en NEXT_PUBLIC ni en respuestas al cliente; los errores no exponen secretos.",
+            "Los límites actuales son por instancia y no se documentan como una protección distribuida; no hay reintentos para eludir cuotas."
+          ],
+          "sources": [
+            "src/lib/server/guard.ts",
+            "src/lib/server/place-verification.ts",
+            "src/lib/server/google-maps.ts",
+            "src/lib/server/gemini.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-30",
+            "TRSMWB-20",
+            "TRSMWB-42"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-02",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "QA-03",
+          "key": "TRSMWB-47",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-47",
+          "title": "Ejecutar regresiones automáticas y comprobar tipos y compilación",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Como desarrollador, quiero comprobaciones repetibles para detectar regresiones en búsquedas, cuentas y rutas.",
+          "criteria": [
+            "npm test cubre contratos, aceptación de visitas, Google, enlaces de cuenta, migración, IA y navegación secuencial a 20 m.",
+            "npm run typecheck, npm run lint y npm run build deben aprobar en el estado a entregar.",
+            "Los fixtures permanecen en tests y no sustituyen resultados del producto; las pruebas con GPS simulado se identifican como tales."
+          ],
+          "sources": [
+            "tests/",
+            "package.json",
+            "scripts/check-maps.ts",
+            "scripts/check-gemini.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-37",
+            "TRSMWB-43"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-03",
+            "sprint-7"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "QA-04",
+          "key": "TRSMWB-48",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-48",
+          "title": "Actualizar la documentación de instalación y servicios de la web",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Ajustar los documentos existentes a la aplicación Next.js y a los servicios que usa el código actual.",
+          "criteria": [
+            "La instalación describe Node.js y los comandos de la aplicación web.",
+            "Las variables requeridas por Maps, Gemini y Supabase corresponden a .env.example.",
+            "Las guías describen las rutas y el comportamiento vigentes de la aplicación."
+          ],
+          "sources": [
+            "README.md",
+            ".env.example",
+            "docs/google-maps.md",
+            "docs/VALIDACION.md"
+          ],
+          "dependencies": [
+            "TRSMWB-35",
+            "TRSMWB-21"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-04",
+            "sprint-7"
+          ],
+          "implementationReference": "Comprobación o actualización pendiente"
+        },
+        {
+          "code": "QA-05",
+          "key": "TRSMWB-49",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-49",
+          "title": "Verificar la integración de las API de chat, lugares y rutas",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Comprobar en el entorno de ejecución que la interfaz y los endpoints existentes intercambian datos válidos.",
+          "criteria": [
+            "La búsqueda devuelve lugares con identificadores verificables.",
+            "El chat recibe lugares y visitas seleccionadas y devuelve una respuesta con el esquema esperado.",
+            "La ruta solicitada utiliza el origen y los destinos elegidos; los errores se comunican en la interfaz."
+          ],
+          "sources": [
+            "tests/api-smoke.ts",
+            "scripts/check-maps.ts",
+            "scripts/check-gemini.ts",
+            "src/app/api/"
+          ],
+          "dependencies": [
+            "TRSMWB-46",
+            "TRSMWB-47",
+            "TRSMWB-48"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-05",
+            "sprint-7"
+          ],
+          "implementationReference": "Comprobación o actualización pendiente"
+        },
+        {
+          "code": "QA-06",
+          "key": "TRSMWB-50",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-50",
+          "title": "Comprobar registro, recuperación y guardado con cuentas reales",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Completar la aceptación de los flujos existentes de correo, sesión y viaje guardado.",
+          "criteria": [
+            "Una cuenta confirma su correo y puede iniciar y cerrar sesión.",
+            "Un enlace de recuperación válido permite cambiar la contraseña y los enlaces caducados muestran un error claro.",
+            "El viaje guardado se recupera al volver a iniciar sesión en la misma cuenta."
+          ],
+          "sources": [
+            "src/components/planner/account.tsx",
+            "src/lib/auth-links.ts",
+            "src/components/auth/",
+            "docs/BREVO_SUPABASE.md"
+          ],
+          "dependencies": [
+            "TRSMWB-44",
+            "TRSMWB-49"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-06",
+            "sprint-7"
+          ],
+          "implementationReference": "Comprobación o actualización pendiente"
+        },
+        {
+          "code": "QA-07",
+          "key": "TRSMWB-51",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-51",
+          "title": "Comprobar navegación y llegada a 20 metros en teléfonos",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Validar el recorrido secuencial implementado con un teléfono y señal GPS real.",
+          "criteria": [
+            "La llegada automática solo se confirma dentro de 20 metros con precisión suficiente y permanencia sostenida.",
+            "El recorrido continúa hacia la siguiente visita sin repetir la anterior.",
+            "Sin ubicación fiable funcionan el pin de salida y la confirmación manual."
+          ],
+          "sources": [
+            "src/lib/journey-navigation.ts",
+            "src/components/planner/use-journey-navigation.ts",
+            "src/components/planner/journey-map.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-37",
+            "TRSMWB-49"
+          ],
+          "parent": "TRSMWB-8",
+          "sprint": 7,
+          "labels": [
+            "turismo-web",
+            "ep-08",
+            "qa-07",
+            "sprint-7"
+          ],
+          "implementationReference": "Comprobación o actualización pendiente"
+        }
+      ]
+    },
+    {
+      "key": "TRSMWB-9",
+      "code": "DB",
+      "title": "EP-09 — Base de datos Supabase y persistencia de viajes",
+      "goal": "Definir el modelo de datos y conectar Supabase con el guardado y la restauración de un viaje por usuario.",
+      "status": "Por hacer",
+      "items": [
+        {
+          "code": "CTA-05",
+          "key": "TRSMWB-42",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-42",
+          "title": "Guardar, abrir y sincronizar un único viaje por cuenta",
+          "type": "Historia",
+          "status": "Por hacer",
+          "story": "Como viajero, quiero conservar mi viaje y decidir qué versión abrir para no sobrescribir elecciones por accidente.",
+          "criteria": [
+            "saved_journeys mantiene un registro por user_id y ofrece Guardar viaje actual y Abrir viaje guardado.",
+            "Tras elegir qué viaje conservar se sincronizan los cambios con espera y cola de escritura; se comprueba la sesión antes de guardar.",
+            "Errores de red o tabla ausente muestran aviso y no se presentan como guardado exitoso; no se promete un historial de múltiples viajes."
+          ],
+          "sources": [
+            "src/components/planner/account.tsx",
+            "supabase/schema.sql",
+            "src/lib/journey-storage.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-41",
+            "TRSMWB-25"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "cta-05",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "DB-06",
+          "key": "TRSMWB-43",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-43",
+          "title": "Validar formatos de viajes guardados y migrar preferencias anteriores",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Validar la estructura del viaje antes de restaurarlo y recuperar preferencias compatibles de formatos anteriores.",
+          "criteria": [
+            "Se valida la versión, el perfil, los filtros y los IDs antes de usar un viaje guardado.",
+            "Los identificadores incompatibles se descartan sin asignar equivalencias ficticias.",
+            "Un formato inválido o una versión futura no sustituye el viaje activo."
+          ],
+          "sources": [
+            "src/lib/journey-storage.ts",
+            "tests/journey-storage.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-42"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-06",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "DB-01",
+          "key": "TRSMWB-53",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-53",
+          "title": "Diseñar el modelo de datos de usuarios y viajes guardados en Supabase",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Definir el almacenamiento que utiliza la aplicación para conservar un viaje por cuenta.",
+          "criteria": [
+            "saved_journeys relaciona user_id con el usuario autenticado.",
+            "journey almacena el estado del recorrido en JSON y updated_at registra su última actualización.",
+            "La clave de usuario permite un único viaje guardado por cuenta y el tamaño del documento está acotado."
+          ],
+          "sources": [
+            "supabase/schema.sql"
+          ],
+          "dependencies": [],
+          "parent": "TRSMWB-9",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-01",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "DB-02",
+          "key": "TRSMWB-54",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-54",
+          "title": "Integrar el cliente de Supabase y las variables de conexión",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Conectar la aplicación web con Supabase usando la configuración pública del entorno.",
+          "criteria": [
+            "El cliente se inicializa con la URL y la clave pública configuradas.",
+            "La interfaz identifica cuando las cuentas no están configuradas.",
+            "La configuración del navegador no utiliza credenciales privilegiadas del servidor."
+          ],
+          "sources": [
+            "src/lib/supabase.ts",
+            ".env.example",
+            "src/components/planner/account.tsx"
+          ],
+          "dependencies": [
+            "TRSMWB-53"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 1,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-02",
+            "sprint-1"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "DB-03",
+          "key": "TRSMWB-55",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-55",
+          "title": "Serializar el estado del viaje para guardarlo en la base de datos",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Preparar un documento persistente con las preferencias y visitas que eligió el viajero.",
+          "criteria": [
+            "El documento conserva el perfil, filtros, agenda y los IDs Google seleccionados.",
+            "Los resultados y las fichas completas de Google no se copian como catálogo a la base de datos.",
+            "La serialización conserva la versión del formato y normaliza los identificadores."
+          ],
+          "sources": [
+            "src/lib/journey-storage.ts",
+            "tests/journey-storage.test.ts",
+            "tests/google-maps.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-53"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-03",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        },
+        {
+          "code": "DB-04",
+          "key": "TRSMWB-56",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-56",
+          "title": "Implementar consultas y actualización del viaje guardado por usuario",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Conectar el panel de cuenta con la lectura y escritura de saved_journeys.",
+          "criteria": [
+            "Las lecturas del viaje se filtran por el usuario de la sesión.",
+            "Guardar usa una actualización o inserción del registro del mismo usuario.",
+            "La interfaz diferencia un guardado correcto de un error y conserva el viaje local ante el fallo."
+          ],
+          "sources": [
+            "src/components/planner/account.tsx",
+            "supabase/schema.sql"
+          ],
+          "dependencies": [
+            "TRSMWB-54",
+            "TRSMWB-55",
+            "TRSMWB-38"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-04",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente; aceptación de integración pendiente"
+        },
+        {
+          "code": "DB-05",
+          "key": "TRSMWB-57",
+          "url": "https://santiigetial.atlassian.net/browse/TRSMWB-57",
+          "title": "Restaurar el viaje y consultar de nuevo sus lugares en Google",
+          "type": "Tarea",
+          "status": "Por hacer",
+          "story": "Reconstruir el viaje a partir de sus IDs y recuperar información vigente de los destinos.",
+          "criteria": [
+            "La carga valida el documento antes de reemplazar el estado del planificador.",
+            "Los IDs Google guardados se resuelven mediante el endpoint de lugares.",
+            "Los fallos de restauración se comunican sin presentar datos inventados."
+          ],
+          "sources": [
+            "src/components/planner/provider.tsx",
+            "src/components/planner/account.tsx",
+            "src/app/api/places/resolve/route.ts",
+            "tests/google-maps.test.ts"
+          ],
+          "dependencies": [
+            "TRSMWB-43",
+            "TRSMWB-55"
+          ],
+          "parent": "TRSMWB-9",
+          "sprint": 2,
+          "labels": [
+            "turismo-web",
+            "ep-09",
+            "db-05",
+            "sprint-2"
+          ],
+          "implementationReference": "Implementación presente en código local"
+        }
+      ]
+    }
+  ]
+}

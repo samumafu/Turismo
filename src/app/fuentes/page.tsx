@@ -11,20 +11,22 @@ export default function Sources() {
           <span className="section-kicker">Explorar con criterio</span>
           <h1>Tu viaje, con información de lugares reales.</h1>
           <p>
-            Google Maps proporciona los lugares, las fotos y las rutas. Tú
-            eliges qué visitar.
+            OpenStreetMap aporta la cartografía y los lugares. OSRM calcula las
+            rutas y Wikimedia Commons aporta fotografías cuando están
+            disponibles. Tú eliges qué visitar.
           </p>
         </header>
         <div className="sources-body">
           <section>
             <h2>Lugares y fotografías</h2>
             <p>
-              Las búsquedas se realizan en Google Maps por nombre, categoría o
-              zona. Verificamos que los resultados correspondan a Nariño,
-              Colombia, y a la distancia por calles elegida. Cada página de una
-              categoría contiene hasta 20 resultados; «Ver más lugares» consulta
-              la siguiente página cuando está disponible, hasta 60 por búsqueda.
-              Puedes cambiar los filtros o la zona para seguir explorando.
+              Las búsquedas se realizan en OpenStreetMap mediante Overpass o
+              Photon por nombre, categoría o zona. Verificamos que los
+              resultados correspondan a Nariño, Colombia, y a la distancia por
+              calles elegida. Cada página de una categoría contiene hasta 20
+              resultados; «Ver más lugares» consulta la siguiente página cuando
+              está disponible. Puedes cambiar los filtros
+              o la zona para seguir explorando.
             </p>
             <p>
               Las fotos se cargan cuando la tarjeta entra en pantalla y muestran
@@ -44,16 +46,16 @@ export default function Sources() {
             <p>
               La ubicación se solicita con tu permiso al pulsar el botón de GPS.
               También puedes indicar una referencia de salida en el chat y
-              confirmar el punto encontrado. Google calcula la ruta en carro o a
+              confirmar el punto encontrado. OSRM calcula la ruta en carro o a
               pie entre las visitas aceptadas, en el orden que elegiste. El
               transporte público abre el recorrido en Google Maps.
             </p>
             <p>
               Tu posición GPS permanece en memoria durante la sesión y se envía
-              a Google solo para calcular la ruta; no forma parte del viaje
-              guardado ni se envía a Gemini. Puedes actualizarla o dejar de
-              usarla. Las horas sugeridas en la agenda no son horarios de
-              apertura ni tiempos de viaje medidos.
+              a los servicios de búsqueda y rutas cuando eliges usarla; no forma
+              parte del viaje guardado ni se envía a Gemini. Puedes actualizarla
+              o dejar de usarla. Las horas sugeridas en la agenda no son
+              horarios de apertura ni tiempos de viaje medidos.
             </p>
           </section>
           <section>
@@ -61,7 +63,7 @@ export default function Sources() {
             <p>
               Gemini interpreta tus solicitudes cuando está configurado. Si no
               responde, la planificación por reglas sigue disponible con los
-              mismos lugares de Google Maps. Solo se añaden las visitas que
+              mismos lugares de OpenStreetMap. Solo se añaden las visitas que
               aceptas; buscar opciones no las incorpora al itinerario.
             </p>
             <p>
@@ -79,17 +81,13 @@ export default function Sources() {
           <section id="privacidad">
             <h2>Privacidad y condiciones</h2>
             <p>
-              Google recibe las consultas de búsqueda, referencias y solicitudes
-              de rutas y fotografías. El mapa conecta el navegador con Google.
-              Esta aplicación incorpora la{" "}
-              <a href="https://policies.google.com/privacy">
-                Política de Privacidad de Google
-              </a>{" "}
-              y los{" "}
-              <a href="https://maps.google.com/help/terms_maps/">
-                Términos de Servicio de Google Maps
+              El navegador carga la cartografía de{" "}
+              <a href="https://www.openstreetmap.org/copyright">
+                © colaboradores de OpenStreetMap
               </a>
-              .
+              . Las consultas de lugares y referencias se envían a Overpass o
+              Photon. OSRM recibe los puntos de la ruta y Wikimedia Commons
+              proporciona imágenes con sus créditos y licencias.
             </p>
             <p>
               Con Gemini, la conversación y los candidatos se envían a Google de
@@ -103,7 +101,8 @@ export default function Sources() {
             <p>
               El servicio es una herramienta de planificación orientativa. Los
               resultados y rutas dependen de la cobertura y disponibilidad de
-              Google Maps; no son reservas ni garantías de acceso.
+              los servicios públicos de cartografía; no son reservas ni
+              garantías de acceso.
             </p>
             <Link href="/planificar">Volver al planificador</Link>
           </section>

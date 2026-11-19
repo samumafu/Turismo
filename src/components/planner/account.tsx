@@ -250,10 +250,10 @@ export function Account() {
       pendingRestored.current = false;
       if (parsed && !hasOpenJourney) {
         if (await current.current.actions.loadJourney(parsed.snapshot)) {
-          setSyncEnabled(true);
+          setSyncEnabled(!parsed.legacyVisits);
           setMessage(
             parsed.legacyVisits
-              ? "Recuperamos tus preferencias. Elige de nuevo las visitas del mapa anterior para continuar con Google Maps."
+              ? "Recuperamos tus preferencias. Elige de nuevo las visitas del mapa anterior para continuar con OpenStreetMap."
               : "Tu viaje guardado está listo.",
           );
         } else setMessage("No se pudo cargar el viaje guardado.");
@@ -315,8 +315,8 @@ export function Account() {
     if (error || !parsed || !(await actions.loadJourney(parsed.snapshot)))
       setMessage("No se pudo abrir el viaje guardado.");
     else {
-      setSyncEnabled(true);
-      setMessage("Viaje guardado abierto.");
+      setSyncEnabled(!parsed.legacyVisits);
+      setMessage(parsed.legacyVisits ? "Recuperamos tus preferencias. Selecciona otra vez las visitas del mapa anterior." : "Viaje guardado abierto.");
     }
     setBusy(false);
   }

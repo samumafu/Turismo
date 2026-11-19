@@ -10,11 +10,11 @@ const snapshot = {
   itinerary: null,
   results: [],
   places: [],
-  acceptedIds: ["google:ChIJStoredTest1"],
+  acceptedIds: ["osm:node:999"],
 };
 test("saved journeys round-trip without retaining catalog data", () => {
   const result = readStoredJourney(storedJourney(snapshot));
-  assert.deepEqual(result?.snapshot.googlePlaceIds, snapshot.acceptedIds);
+  assert.deepEqual(result?.snapshot.acceptedIds, snapshot.acceptedIds);
   assert.deepEqual(result?.snapshot.places, []);
   assert.equal(result?.snapshot.version, 2);
 });
@@ -22,8 +22,8 @@ test("legacy provider records no longer prevent restoring preferences", () => {
   const result = readStoredJourney({
     ...snapshot,
     profile: { days: 2 },
-    acceptedIds: ["osm:node:123", ...snapshot.acceptedIds],
-    places: [{ id: "osm:node:123" }],
+    acceptedIds: ["google:LegacyPlace", ...snapshot.acceptedIds],
+    places: [{ id: "google:LegacyPlace" }],
     search: {
       ...snapshot.search,
       reference: { id: "osm:node:456" },

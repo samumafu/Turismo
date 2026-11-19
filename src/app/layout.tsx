@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s | Turismo Nariño",
   },
   description:
-    "Descubre Pasto y Nariño. Elige lugares, consulta sus fotos y organiza tu recorrido con IA y rutas de Google Maps. Turismo Inteligente Pasto, prototipo universitario.",
+    "Descubre Pasto y Nariño. Elige lugares, consulta sus fotos y organiza tu recorrido con IA y rutas de OpenStreetMap. Turismo Inteligente Pasto, prototipo universitario.",
   applicationName: "Turismo Inteligente Pasto",
 };
 

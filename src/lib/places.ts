@@ -50,7 +50,10 @@ export const coordinateSchema = z.tuple([
   z.number().min(-79.5).max(-76.3),
 ]);
 export const googleIdSchema = z.string().regex(/^google:[A-Za-z0-9_-]{5,240}$/);
-export const placeIdSchema = googleIdSchema;
+export const osmIdSchema = z
+  .string()
+  .regex(/^osm:(node|way|relation):[1-9]\d{0,14}$/);
+export const placeIdSchema = osmIdSchema;
 export const googleAuthorSchema = z.object({
   displayName: z.string().max(250),
   uri: z
@@ -74,7 +77,7 @@ export const placeSchema = z.object({
   region: z.string().max(140),
   description: z.string().max(600),
   coordinates: coordinateSchema,
-  coordinateKind: z.literal("place"),
+  coordinateKind: z.enum(["node", "center", "place"]),
   zone: z.string().max(100),
   visitMinutes: z.number().nullable(),
   costCOP: z.null(),
@@ -89,6 +92,12 @@ export const placeSchema = z.object({
   note: z.string().max(800),
   observedAt: z.string().datetime(),
   cuisine: z.string().max(140).nullable(),
+  image: z.string().optional(),
+  wikidata: z
+    .string()
+    .regex(/^Q[1-9]\d*$/)
+    .optional(),
+  commons: z.string().max(250).optional(),
   verification: z.string().max(100).optional(),
   travel: travelSchema.optional(),
   googlePhoto: z
@@ -130,6 +139,24 @@ export const searchSpecSchema = z.object({
   regionalFood: z.boolean().default(false),
 });
 export type SearchSpec = z.infer<typeof searchSpecSchema>;
+export function pinRequested(text: string) {
+  return /\b(?:pin(?:\s+(?:de salida|de partida|del mapa|que (?:puse|marque|elegi)))?|punto (?:marcado|elegido) en el mapa)\b/.test(
+    normalize(text),
+  );
+}
+export function departureSearchRequested(text: string) {
+  return (
+    pinRequested(text) ||
+    /\b(?:desde|cerca de|cerca del|alrededor de)\s+(?:(?:el|mi|nuestro)\s+)?(?:punto de (?:salida|partida)|origen)\b/.test(
+      normalize(text),
+    )
+  );
+}
+export function currentLocationRequested(text: string) {
+  return /\b(?:mi ubicacion|nuestra ubicacion|aqui|donde (?:estoy|estamos)|cerca de mi|cerca de nosotros)\b/.test(
+    normalize(text),
+  );
+}
 // A named reference can also be the departure for routes to chosen visits.
 export function locationReference(text: string): string | undefined {
   const match =
@@ -139,7 +166,40 @@ export function locationReference(text: string): string | undefined {
     text.match(
       /\ben\s+(?:(?:la|el)\s+)?((?:universidad|campus|hospital|terminal|aeropuerto|plaza|parque|hotel|colegio)\s+.+?)(?:[.!?,]|\s+(?:y\s+)?(?:quiero|busca|busco|necesito|me gustar[ií]a)\b|$)/i,
     );
-  return match?.[1].trim().slice(0, 160);
+  const reference = match?.[1].trim().slice(0, 160);
+  return reference &&
+    !currentLocationRequested(reference) &&
+    !departureSearchRequested("desde " + reference) &&
+    !/^(?:mi|nosotros)$/i.test(reference)
+    ? reference
+    : undefined;
+}
+
+// Municipalities and corregimientos are resolved by Maps, not a fixed catalog.
+export function searchArea(text: string): string | undefined {
+  const areas = text
+    .split(/\ben\s+/i)
+    .slice(1)
+    .reverse();
+  for (const candidate of areas) {
+    const area = candidate
+      .split(
+        /[,;.!?]|\s+(?:a\s+\d|dentro de|(?:con (?:un )?)?radio|a menos de|a no mas de|a pie|caminando|y\s+(?:quiero|busca|necesito))\b/i,
+      )[0]
+      .replace(
+        /^(?:(?:el\s+)?municipio|(?:el\s+)?corregimiento|(?:la\s+)?ciudad)\s+de\s+/i,
+        "",
+      )
+      .trim();
+    if (
+      area &&
+      !/^(?:carro|coche|auto|automovil|bus|moto|bicicleta|familia|pareja|grupo|un dia|dos dias|la manana|la tarde|la noche|narino|colombia)\b/.test(
+        normalize(area),
+      )
+    )
+      return area.slice(0, 160);
+  }
+  return undefined;
 }
 export const searchRequestSchema = z.object({
   text: z.string().trim().max(300).default(""),
@@ -151,7 +211,7 @@ export const searchResponseSchema = z.object({
   total: z.number().int(),
   nextPageToken: z.string().max(4096).nullable().default(null),
   spec: searchSpecSchema,
-  source: z.literal("google"),
+  source: z.enum(["overpass", "photon", "cache", "stale-cache", "google"]),
   provider: z.string().max(200).optional(),
   observedAt: z.string(),
   notice: z.string().nullable(),
@@ -167,7 +227,11 @@ export function haversine(a: number[], b: number[]) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(t), Math.sqrt(1 - t));
 }
 export function mapsLink(place: Place) {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${encodeURIComponent(place.id.slice(7))}`;
+  const params = new URLSearchParams({
+    api: "1",
+    query: place.coordinates.join(","),
+  });
+  return `https://www.google.com/maps/search/?${params}`;
 }
 export function directionsLink(
   stops: Place[],
@@ -206,19 +270,35 @@ export function interpretSearch(
     center: previous.center,
     categories: [...previous.categories],
   };
+  const area = searchArea(text);
+  const nearby = locationReference(text);
   const zone = [...zoneKeys].find(
     (key) =>
-      t.includes(normalize(searchZones[key].label.split(" / ")[0])) ||
-      (key === "cocha" && /cocha|encano/.test(t)) ||
-      (key === "union" && /la union/.test(t)),
+      (area
+        ? normalize(area) === normalize(searchZones[key].label.split(" / ")[0])
+        : t.includes(normalize(searchZones[key].label.split(" / ")[0]))) ||
+      (key === "cocha" && /cocha|encano/.test(area ? normalize(area) : t)) ||
+      (key === "union" && /la union/.test(area ? normalize(area) : t)),
   );
   if (zone) {
     spec.zone = zone;
     spec.center = undefined;
-    if (zone !== previous.zone) {
+    if (!nearby || zone !== previous.zone) {
       spec.near = undefined;
       spec.reference = undefined;
+      spec.name = "";
     }
+  }
+  if (area && !zone && !nearby) {
+    spec.near = area;
+    spec.center = undefined;
+    spec.reference = undefined;
+    spec.name = "";
+  }
+  if (currentLocationRequested(text) && !area && !zone && !nearby) {
+    spec.near = undefined;
+    spec.reference = undefined;
+    spec.name = "";
   }
   const detected: SearchSpec["categories"] = [];
   const patterns: [RegExp, SearchSpec["categories"][number]][] = [
@@ -281,13 +361,13 @@ export function interpretSearch(
     text.trim() &&
     !radius &&
     !zone &&
+    !area &&
     !detected.length &&
     !/dia|presupuesto|somos|viajo|cambia|reduce|hora|persona|carro|pie|bus|anade|reemplaza/.test(
       t,
     )
   )
     spec.name = text.trim().slice(0, 80);
-  const nearby = locationReference(text);
   if (zone && detected.length && !nearby) {
     spec.near = undefined;
     spec.reference = undefined;
@@ -313,6 +393,17 @@ export function interpretSearch(
     spec.radius = 1500;
   if (/a pie|caminando/.test(t)) spec.travelMode = "walking";
   else if (/en carro|en coche|conduciendo/.test(t)) spec.travelMode = "driving";
+  if (departureSearchRequested(text)) {
+    spec.near = undefined;
+    spec.reference = undefined;
+    if (
+      !named &&
+      (!detected.length ||
+        departureSearchRequested(spec.name) ||
+        /^cercan[oa]s?\b/.test(normalize(spec.name)))
+    )
+      spec.name = "";
+  }
   return searchSpecSchema.parse(spec);
 }
 
